@@ -12,7 +12,6 @@ export {
   featuredSetApi,
   uploadImage,
   deleteImage,
-  api, // Legacy axios instance for admin operations
 } from './firebaseService';
 
 // Export Firebase instances for direct access if needed

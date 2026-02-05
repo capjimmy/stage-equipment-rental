@@ -24,27 +24,8 @@ import {
   signOut,
   User as FirebaseUser,
 } from 'firebase/auth';
-import axios from 'axios';
 import { db, storage, auth } from './firebase';
 
-// Legacy axios instance for admin operations that still need the backend
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-
-export const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add token to requests if available
-api.interceptors.request.use((config) => {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
 import {
   Product,
   Category,
