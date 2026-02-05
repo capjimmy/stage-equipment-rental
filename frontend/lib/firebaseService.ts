@@ -559,8 +559,24 @@ export const orderApi = {
       deliveryNotes: data.deliveryNotes || null,
       status: 'requested',
       totalPrice: cart.items.reduce((sum, item) => {
-        const days = Math.ceil((new Date(data.endDate).getTime() - new Date(data.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
-        return sum + (parseFloat(item.product?.baseDailyPrice || '0') * item.quantity * days);
+        // Use item's individual dates, falling back to order dates
+        const itemStartDate = item.startDate || data.startDate;
+        const itemEndDate = item.endDate || data.endDate;
+        const startMs = new Date(itemStartDate).getTime();
+        const endMs = new Date(itemEndDate).getTime();
+        const diffDays = (endMs - startMs) / (1000 * 60 * 60 * 24);
+        const days = Math.max(1, Math.ceil(diffDays) + 1);
+        const price = parseFloat(String(item.product?.baseDailyPrice || '0'));
+        console.log('[orderApi.create] Item calculation:', {
+          productId: item.productId,
+          price,
+          quantity: item.quantity,
+          days,
+          startDate: itemStartDate,
+          endDate: itemEndDate,
+          subtotal: price * item.quantity * days
+        });
+        return sum + (price * item.quantity * days);
       }, 0),
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
