@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { api, categoryApi, tagApi, adminApi } from '@/lib/api';
+import { productApi, categoryApi, tagApi, adminApi } from '@/lib/api';
 import AdminLayout from '@/components/AdminLayout';
 import Loading from '@/components/Loading';
 import Toast, { ToastType } from '@/components/Toast';
@@ -42,15 +42,13 @@ export default function EditProductPage() {
   const fetchData = async () => {
     try {
       setLoadingProduct(true);
-      const [productRes, categoriesRes, tagsRes, assetsRes, blockedPeriodsRes] = await Promise.all([
-        fetch(`http://localhost:3001/api/products/${productId}`),
+      const [product, categoriesRes, tagsRes, assetsRes, blockedPeriodsRes] = await Promise.all([
+        productApi.getById(productId),
         categoryApi.getAll(),
         tagApi.getAll(),
         adminApi.getAssets(productId).catch(() => []),
         adminApi.getBlockedPeriods(productId).catch(() => []),
       ]);
-
-      const product = await productRes.json();
       setCategories(categoriesRes || []);
       setAllTags(tagsRes || []);
       setAssets(assetsRes || []);

@@ -8,6 +8,7 @@ import { User as UserType, Product } from '@/types';
 import { useOrders } from '@/hooks/useOrders';
 import OrdersSection from '@/components/OrdersSection';
 import ProfileSection from '@/components/ProfileSection';
+import { productApi, adminApi } from '@/lib/api';
 
 export default function MyPage() {
   const router = useRouter();
@@ -26,8 +27,7 @@ export default function MyPage() {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/products');
-      const data = await response.json();
+      const data = await adminApi.getAllProducts();
       setProducts(data);
       const total = data.length;
       const available = data.filter((p: Product) => p.status === 'active').length;
@@ -58,17 +58,9 @@ export default function MyPage() {
   const handleDeleteProduct = async (productId: string) => {
     if (!confirm('정말 이 상품을 삭제하시겠습니까?')) return;
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:3001/api/products/${productId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (response.ok) {
-        alert('상품이 삭제되었습니다.');
-        fetchProducts();
-      } else {
-        alert('상품 삭제에 실패했습니다.');
-      }
+      await adminApi.deleteProduct(productId);
+      alert('상품이 삭제되었습니다.');
+      fetchProducts();
     } catch (error) {
       console.error('Failed to delete product:', error);
       alert('상품 삭제 중 오류가 발생했습니다.');

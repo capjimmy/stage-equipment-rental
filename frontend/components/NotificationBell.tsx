@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bell, X } from 'lucide-react';
 import Link from 'next/link';
+import { collection, query, where, orderBy, getDocs, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { db, auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 interface Notification {
   id: string;
@@ -19,17 +22,30 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchNotifications();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserId(user.uid);
+      } else {
+        setUserId(null);
+        setNotifications([]);
+      }
+    });
 
-    // 30초마다 알림 갱신
-    const interval = setInterval(fetchNotifications, 30000);
-
-    return () => clearInterval(interval);
-     
+    return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (userId) {
+      fetchNotifications();
+      // 30초마다 알림 갱신
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [userId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -43,63 +59,57 @@ export default function NotificationBell() {
   }, []);
 
   const fetchNotifications = async () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
+    if (!userId) return;
 
     try {
-      const response = await fetch('http://localhost:3001/api/notifications', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
+      const notificationsRef = collection(db, 'notifications');
+      const q = query(
+        notificationsRef,
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+
+      const notifs: Notification[] = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return {
+          id: docSnap.id,
+          userId: data.userId,
+          type: data.type,
+          title: data.title,
+          message: data.message,
+          relatedEntityId: data.relatedEntityId || null,
+          isRead: data.isRead || false,
+          createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt || new Date().toISOString(),
+        };
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data || []);
-      }
+      setNotifications(notifs);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     }
   };
 
   const markAsRead = async (notificationId: string) => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
-
     try {
-      const response = await fetch(`http://localhost:3001/api/notifications/${notificationId}/read`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        setNotifications(notifications.map(n =>
-          n.id === notificationId ? { ...n, isRead: true } : n
-        ));
-      }
+      const notifRef = doc(db, 'notifications', notificationId);
+      await updateDoc(notifRef, { isRead: true });
+      setNotifications(notifications.map(n =>
+        n.id === notificationId ? { ...n, isRead: true } : n
+      ));
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }
   };
 
   const markAllAsRead = async () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
-
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/notifications/read-all', {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-      }
+      const unreadNotifs = notifications.filter(n => !n.isRead);
+      await Promise.all(
+        unreadNotifs.map(n => updateDoc(doc(db, 'notifications', n.id), { isRead: true }))
+      );
+      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
     } catch (error) {
       console.error('Failed to mark all as read:', error);
     } finally {
@@ -108,20 +118,9 @@ export default function NotificationBell() {
   };
 
   const deleteNotification = async (notificationId: string) => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return;
-
     try {
-      const response = await fetch(`http://localhost:3001/api/notifications/${notificationId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        setNotifications(notifications.filter(n => n.id !== notificationId));
-      }
+      await deleteDoc(doc(db, 'notifications', notificationId));
+      setNotifications(notifications.filter(n => n.id !== notificationId));
     } catch (error) {
       console.error('Failed to delete notification:', error);
     }

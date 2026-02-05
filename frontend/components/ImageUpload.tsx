@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { X, Upload } from 'lucide-react';
+import { uploadImage } from '@/lib/firebaseService';
 
 interface ImageUploadProps {
   label: string;
@@ -35,24 +36,10 @@ export default function ImageUpload({
 
     try {
       const uploadPromises = Array.from(files).map(async (file) => {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        const token = localStorage.getItem('accessToken');
-        const response = await fetch('http://localhost:3001/api/upload/image', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error('Upload failed');
-        }
-
-        const data = await response.json();
-        return `http://localhost:3001${data.url}`;
+        // Use Firebase Storage for image upload
+        const path = `products/${Date.now()}-${file.name}`;
+        const downloadUrl = await uploadImage(file, path);
+        return downloadUrl;
       });
 
       const uploadedUrls = await Promise.all(uploadPromises);
