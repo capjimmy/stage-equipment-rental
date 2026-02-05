@@ -4,53 +4,44 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Package, Calendar, MapPin, CreditCard, User, Phone, Mail, Clock, CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
+import { orderApi, adminApi } from '@/lib/api';
+
+interface OrderItem {
+  id?: string;
+  productId: string;
+  quantity: number;
+  pricePerDay: number;
+  product?: {
+    id: string;
+    title: string;
+    baseDailyPrice?: string | number;
+    images?: string[];
+  };
+}
 
 interface OrderDetail {
   id: string;
   createdAt: string;
   startDate: string;
   endDate: string;
-  totalAmount: string;
-  paymentMethod: string;
-  paymentStatus: string;
-  fulfillmentStatus: string;
+  totalPrice: number;
+  status: string;
   deliveryMethod: string;
-  shippingCost: string;
   shippingAddress: string;
-  returnAddress: string;
-  deliveryNotes: string;
-  depositDeadlineAt: string;
-  adminApprovedAt1: string;
-  adminApprovedAt2: string;
-  canceledAt: string;
-  cancellationReason: string;
-  refundRate: string;
-  refundAmount: string;
-  cancellationFee: string;
-  refundProcessedAt: string;
-  rejectionReason: string;
-  user: {
+  deliveryNotes?: string;
+  approvedAt?: string;
+  confirmedAt?: string;
+  rejectedAt?: string;
+  cancelledAt?: string;
+  rejectionReason?: string;
+  cancelReason?: string;
+  user?: {
     id: string;
     name: string;
     email: string;
-    phone: string;
+    phone?: string;
   };
-  rentals: {
-    id: string;
-    blockedStart: string;
-    blockedEnd: string;
-    quantity: number;
-    rentalRate: string;
-    asset: {
-      id: string;
-      product: {
-        id: string;
-        title: string;
-        baseDailyPrice: string;
-        imageUrl: string;
-      };
-    };
-  }[];
+  items: OrderItem[];
 }
 
 export default function OrderDetailPage() {
@@ -64,27 +55,71 @@ export default function OrderDetailPage() {
   useEffect(() => {
     const loadOrderDetail = async () => {
       try {
-        const token = localStorage.getItem('accessToken');
         const userStr = localStorage.getItem('user');
+        let adminMode = false;
 
         if (userStr) {
           const user = JSON.parse(userStr);
-          setIsAdmin(user.role === 'admin');
+          adminMode = user.role === 'admin';
+          setIsAdmin(adminMode);
         }
 
-        const response = await fetch(`http://localhost:3001/api/orders/${orderId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        // Use Firebase API to get order
+        const orderData = await orderApi.getOrderById(orderId);
 
-        if (response.ok) {
-          const data = await response.json();
-          setOrder(data);
-        } else {
-          alert('주문 정보를 불러오는데 실패했습니다.');
-          router.push('/mypage');
+        // Get user info if admin
+        let orderWithUser = orderData as any;
+        if (adminMode && orderData.userId) {
+          try {
+            const { doc, getDoc } = await import('firebase/firestore');
+            const { db } = await import('@/lib/firebase');
+            const userDoc = await getDoc(doc(db, 'users', orderData.userId));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              orderWithUser.user = {
+                id: userDoc.id,
+                name: userData.name,
+                email: userData.email,
+                phone: userData.phone,
+              };
+            }
+          } catch (err) {
+            console.error('Failed to load user info:', err);
+          }
         }
+
+        // Populate product info for items if not already populated
+        if (orderWithUser.items && Array.isArray(orderWithUser.items)) {
+          const { doc, getDoc } = await import('firebase/firestore');
+          const { db } = await import('@/lib/firebase');
+
+          const populatedItems = await Promise.all(
+            orderWithUser.items.map(async (item: any) => {
+              if (item.product?.title) return item; // Already populated
+              try {
+                const productDoc = await getDoc(doc(db, 'products', item.productId));
+                if (productDoc.exists()) {
+                  const productData = productDoc.data();
+                  return {
+                    ...item,
+                    product: {
+                      id: productDoc.id,
+                      title: productData.title,
+                      baseDailyPrice: productData.baseDailyPrice,
+                      images: productData.images || [],
+                    },
+                  };
+                }
+              } catch (err) {
+                console.error('Failed to load product:', item.productId, err);
+              }
+              return item;
+            })
+          );
+          orderWithUser.items = populatedItems;
+        }
+
+        setOrder(orderWithUser);
       } catch (error) {
         console.error('Failed to load order:', error);
         alert('주문 정보를 불러오는 중 오류가 발생했습니다.');
@@ -103,22 +138,9 @@ export default function OrderDetailPage() {
     }
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:3001/api/orders/${orderId}/confirm-payment`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        alert('입금이 확인되었습니다.');
-        window.location.reload();
-      } else {
-        const error = await response.json();
-        alert(error.message || '입금 확인에 실패했습니다.');
-      }
+      await adminApi.confirmPayment(orderId);
+      alert('입금이 확인되었습니다.');
+      window.location.reload();
     } catch (error) {
       console.error('Failed to confirm payment:', error);
       alert('입금 확인 중 오류가 발생했습니다.');
@@ -131,22 +153,9 @@ export default function OrderDetailPage() {
     }
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:3001/api/orders/${orderId}/dispatch`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        alert('상품이 발송되었습니다.');
-        window.location.reload();
-      } else {
-        const error = await response.json();
-        alert(error.message || '상품 발송 처리에 실패했습니다.');
-      }
+      await adminApi.updateOrderStatus(orderId, 'dispatched');
+      alert('상품이 발송되었습니다.');
+      window.location.reload();
     } catch (error) {
       console.error('Failed to dispatch order:', error);
       alert('상품 발송 중 오류가 발생했습니다.');
@@ -159,22 +168,9 @@ export default function OrderDetailPage() {
     }
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:3001/api/orders/${orderId}/collect`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        alert('상품이 회수되었습니다.');
-        window.location.reload();
-      } else {
-        const error = await response.json();
-        alert(error.message || '상품 회수 처리에 실패했습니다.');
-      }
+      await adminApi.updateOrderStatus(orderId, 'completed');
+      alert('상품이 회수되었습니다.');
+      window.location.reload();
     } catch (error) {
       console.error('Failed to collect order:', error);
       alert('상품 회수 중 오류가 발생했습니다.');
@@ -188,23 +184,9 @@ export default function OrderDetailPage() {
     }
 
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`http://localhost:3001/api/orders/${orderId}/cancel`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ reason }),
-      });
-
-      if (response.ok) {
-        alert('예약이 취소되었습니다.');
-        window.location.reload();
-      } else {
-        const error = await response.json();
-        alert(error.message || '예약 취소에 실패했습니다.');
-      }
+      await orderApi.cancel(orderId, reason);
+      alert('예약이 취소되었습니다.');
+      window.location.reload();
     } catch (error) {
       console.error('Failed to cancel order:', error);
       alert('예약 취소 중 오류가 발생했습니다.');
@@ -212,27 +194,17 @@ export default function OrderDetailPage() {
   };
 
   const statusMap: Record<string, { label: string; color: string }> = {
-    requested: { label: '예약신청', color: 'bg-yellow-100 text-yellow-700' },
-    hold_pendingpay: { label: '입금대기', color: 'bg-orange-100 text-orange-700' },
-    confirmed: { label: '확정됨', color: 'bg-blue-100 text-blue-700' },
+    requested: { label: '문의접수', color: 'bg-yellow-100 text-yellow-700' },
+    approved: { label: '승인됨 (입금대기)', color: 'bg-orange-100 text-orange-700' },
+    confirmed: { label: '예약확정', color: 'bg-blue-100 text-blue-700' },
     preparing: { label: '준비중', color: 'bg-indigo-100 text-indigo-700' },
     dispatched: { label: '배송중', color: 'bg-purple-100 text-purple-700' },
     delivered: { label: '배송완료', color: 'bg-cyan-100 text-cyan-700' },
+    in_use: { label: '사용중', color: 'bg-emerald-100 text-emerald-700' },
     returned: { label: '반납완료', color: 'bg-slate-100 text-slate-700' },
-    inspecting: { label: '검수중', color: 'bg-teal-100 text-teal-700' },
-    inspection_passed: { label: '검수완료', color: 'bg-green-100 text-green-700' },
-    inspection_failed: { label: '검수실패', color: 'bg-rose-100 text-rose-700' },
+    completed: { label: '완료', color: 'bg-green-100 text-green-700' },
     rejected: { label: '거절됨', color: 'bg-red-100 text-red-700' },
-    canceled: { label: '취소됨', color: 'bg-red-100 text-red-700' },
-    expired: { label: '만료됨', color: 'bg-gray-100 text-gray-700' },
-  };
-
-  const paymentStatusMap: Record<string, { label: string; color: string }> = {
-    pending: { label: '입금대기', color: 'bg-yellow-100 text-yellow-700' },
-    confirmed: { label: '입금완료', color: 'bg-green-100 text-green-700' },
-    failed: { label: '결제실패', color: 'bg-red-100 text-red-700' },
-    expired: { label: '만료됨', color: 'bg-gray-100 text-gray-700' },
-    refunded: { label: '환불완료', color: 'bg-blue-100 text-blue-700' },
+    cancelled: { label: '취소됨', color: 'bg-red-100 text-red-700' },
   };
 
   const calculateRentalDays = (start: string, end: string) => {
@@ -298,42 +270,36 @@ export default function OrderDetailPage() {
               <div className="space-y-2.5 sm:space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
                   <span className="text-xs sm:text-sm text-slate-600">주문 상태</span>
-                  <span className={`px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium w-fit ${statusMap[order.fulfillmentStatus]?.color || 'bg-gray-100 text-gray-700'}`}>
-                    {statusMap[order.fulfillmentStatus]?.label || order.fulfillmentStatus}
+                  <span className={`px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium w-fit ${statusMap[order.status]?.color || 'bg-gray-100 text-gray-700'}`}>
+                    {statusMap[order.status]?.label || order.status}
                   </span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
-                  <span className="text-xs sm:text-sm text-slate-600">결제 상태</span>
-                  <span className={`px-2.5 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium w-fit ${paymentStatusMap[order.paymentStatus]?.color || 'bg-gray-100 text-gray-700'}`}>
-                    {paymentStatusMap[order.paymentStatus]?.label || order.paymentStatus}
+                  <span className="text-xs sm:text-sm text-slate-600">대여기간</span>
+                  <span className="text-xs sm:text-sm font-medium">
+                    {new Date(order.startDate).toLocaleDateString('ko-KR')} ~ {new Date(order.endDate).toLocaleDateString('ko-KR')} ({rentalDays}일)
                   </span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
                   <span className="text-xs sm:text-sm text-slate-600">주문일시</span>
                   <span className="text-xs sm:text-sm font-medium">{new Date(order.createdAt).toLocaleString('ko-KR')}</span>
                 </div>
-                {order.adminApprovedAt1 && (
+                {order.approvedAt && (
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
-                    <span className="text-xs sm:text-sm text-slate-600">1차 승인일시</span>
-                    <span className="text-xs sm:text-sm font-medium">{new Date(order.adminApprovedAt1).toLocaleString('ko-KR')}</span>
+                    <span className="text-xs sm:text-sm text-slate-600">승인일시</span>
+                    <span className="text-xs sm:text-sm font-medium">{new Date(order.approvedAt).toLocaleString('ko-KR')}</span>
                   </div>
                 )}
-                {order.adminApprovedAt2 && (
+                {order.confirmedAt && (
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
-                    <span className="text-xs sm:text-sm text-slate-600">입금 확인일시</span>
-                    <span className="text-xs sm:text-sm font-medium">{new Date(order.adminApprovedAt2).toLocaleString('ko-KR')}</span>
+                    <span className="text-xs sm:text-sm text-slate-600">예약확정일시</span>
+                    <span className="text-xs sm:text-sm font-medium">{new Date(order.confirmedAt).toLocaleString('ko-KR')}</span>
                   </div>
                 )}
-                {order.depositDeadlineAt && (
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
-                    <span className="text-xs sm:text-sm text-slate-600">입금 마감일시</span>
-                    <span className="text-xs sm:text-sm font-medium text-orange-600">{new Date(order.depositDeadlineAt).toLocaleString('ko-KR')}</span>
-                  </div>
-                )}
-                {order.canceledAt && (
+                {order.cancelledAt && (
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
                     <span className="text-xs sm:text-sm text-slate-600">취소일시</span>
-                    <span className="text-xs sm:text-sm font-medium text-red-600">{new Date(order.canceledAt).toLocaleString('ko-KR')}</span>
+                    <span className="text-xs sm:text-sm font-medium text-red-600">{new Date(order.cancelledAt).toLocaleString('ko-KR')}</span>
                   </div>
                 )}
               </div>
@@ -346,34 +312,46 @@ export default function OrderDetailPage() {
                 대여 상품
               </h2>
               <div className="space-y-3 sm:space-y-4">
-                {order.rentals.map((rental) => (
-                  <div key={rental.id} className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-violet-300 transition-colors">
-                    {rental.asset?.product?.imageUrl && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={rental.asset.product.imageUrl}
-                        alt={rental.asset.product.title}
-                        className="w-full sm:w-20 h-48 sm:h-20 object-cover rounded-lg"
-                        onError={(e) => {
-                          e.currentTarget.src = '/images/placeholder.svg';
-                        }}
-                      />
-                    )}
-                    <div className="flex-1">
-                      <h3 className="font-bold text-base sm:text-lg mb-2 sm:mb-1">{rental.asset?.product?.title}</h3>
-                      <div className="text-xs sm:text-sm text-slate-600 space-y-1.5 sm:space-y-1">
-                        <p className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                          <Calendar className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
-                          <span className="break-all">{new Date(rental.blockedStart).toLocaleDateString('ko-KR')} ~ {new Date(rental.blockedEnd).toLocaleDateString('ko-KR')}</span>
-                          <span className="text-violet-600 font-medium">({rentalDays}일)</span>
-                        </p>
-                        <p>수량: {rental.quantity}개</p>
-                        <p>일 대여료: ₩{parseFloat(rental.asset?.product?.baseDailyPrice || '0').toLocaleString()}</p>
-                        <p className="font-bold text-violet-600">소계: ₩{(parseFloat(rental.rentalRate || '0') * rental.quantity * rentalDays).toLocaleString()}</p>
+                {order.items?.map((item, index) => {
+                  const dailyPrice = Number(item.pricePerDay || item.product?.baseDailyPrice || 0);
+                  const subtotal = dailyPrice * item.quantity * rentalDays;
+                  return (
+                    <div key={item.id || index} className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-3 sm:p-4 border border-slate-200 rounded-lg hover:border-violet-300 transition-colors">
+                      {item.product?.images?.[0] && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={item.product.images[0]}
+                          alt={item.product.title}
+                          className="w-full sm:w-20 h-48 sm:h-20 object-cover rounded-lg"
+                          onError={(e) => {
+                            e.currentTarget.src = '/images/placeholder.svg';
+                          }}
+                        />
+                      )}
+                      <div className="flex-1">
+                        <Link
+                          href={`/product/${item.product?.id || item.productId}`}
+                          className="font-bold text-base sm:text-lg mb-2 sm:mb-1 hover:text-violet-600 transition-colors"
+                        >
+                          {item.product?.title || `상품 #${item.productId}`}
+                        </Link>
+                        <div className="text-xs sm:text-sm text-slate-600 space-y-1.5 sm:space-y-1 mt-2">
+                          <p className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                            <Calendar className="w-3.5 sm:w-4 h-3.5 sm:h-4" />
+                            <span className="break-all">{new Date(order.startDate).toLocaleDateString('ko-KR')} ~ {new Date(order.endDate).toLocaleDateString('ko-KR')}</span>
+                            <span className="text-violet-600 font-medium">({rentalDays}일)</span>
+                          </p>
+                          <p>수량: {item.quantity}개</p>
+                          <p>일 대여료: ₩{dailyPrice.toLocaleString()}</p>
+                          <p className="font-bold text-violet-600">소계: ₩{subtotal.toLocaleString()}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+                {(!order.items || order.items.length === 0) && (
+                  <p className="text-sm text-slate-500 text-center py-4">상품 정보 없음</p>
+                )}
               </div>
             </div>
 
@@ -392,12 +370,6 @@ export default function OrderDetailPage() {
                   <span className="text-xs sm:text-sm text-slate-600 block mb-1">배송지 주소</span>
                   <span className="text-sm sm:text-base font-medium break-all">{order.shippingAddress || '미입력'}</span>
                 </div>
-                {order.returnAddress && (
-                  <div>
-                    <span className="text-xs sm:text-sm text-slate-600 block mb-1">회수지 주소</span>
-                    <span className="text-sm sm:text-base font-medium break-all">{order.returnAddress}</span>
-                  </div>
-                )}
                 {order.deliveryNotes && (
                   <div>
                     <span className="text-xs sm:text-sm text-slate-600 block mb-1">배송 메모</span>
@@ -434,47 +406,23 @@ export default function OrderDetailPage() {
             )}
 
             {/* 취소/환불 정보 */}
-            {(order.canceledAt || order.rejectionReason) && (
+            {(order.cancelledAt || order.rejectedAt || order.rejectionReason || order.cancelReason) && (
               <div className="card p-4 sm:p-6 border-red-200 bg-red-50">
                 <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4 flex items-center gap-2 text-red-700">
                   <XCircle className="w-5 sm:w-6 h-5 sm:h-6" />
-                  취소/환불 정보
+                  취소/거절 정보
                 </h2>
                 <div className="space-y-2.5 sm:space-y-3">
-                  {order.cancellationReason && (
+                  {order.cancelReason && (
                     <div>
                       <span className="text-xs sm:text-sm text-slate-600 block mb-1">취소 사유</span>
-                      <span className="text-sm sm:text-base font-medium">{order.cancellationReason}</span>
+                      <span className="text-sm sm:text-base font-medium">{order.cancelReason}</span>
                     </div>
                   )}
                   {order.rejectionReason && (
                     <div>
                       <span className="text-xs sm:text-sm text-slate-600 block mb-1">거절 사유</span>
                       <span className="text-sm sm:text-base font-medium">{order.rejectionReason}</span>
-                    </div>
-                  )}
-                  {order.refundAmount && (
-                    <div>
-                      <span className="text-xs sm:text-sm text-slate-600 block mb-1">환불 금액</span>
-                      <span className="text-sm sm:text-base font-medium text-red-600">₩{parseFloat(order.refundAmount).toLocaleString()}</span>
-                    </div>
-                  )}
-                  {order.refundRate && (
-                    <div>
-                      <span className="text-xs sm:text-sm text-slate-600 block mb-1">환불율</span>
-                      <span className="text-sm sm:text-base font-medium">{order.refundRate}%</span>
-                    </div>
-                  )}
-                  {order.cancellationFee && (
-                    <div>
-                      <span className="text-xs sm:text-sm text-slate-600 block mb-1">취소 수수료</span>
-                      <span className="text-sm sm:text-base font-medium">₩{parseFloat(order.cancellationFee).toLocaleString()}</span>
-                    </div>
-                  )}
-                  {order.refundProcessedAt && (
-                    <div>
-                      <span className="text-xs sm:text-sm text-slate-600 block mb-1">환불 처리일시</span>
-                      <span className="text-sm sm:text-base font-medium">{new Date(order.refundProcessedAt).toLocaleString('ko-KR')}</span>
                     </div>
                   )}
                 </div>
@@ -491,24 +439,16 @@ export default function OrderDetailPage() {
                   결제 정보
                 </h2>
                 <div className="space-y-2.5 sm:space-y-3">
-                  <div className="flex justify-between text-xs sm:text-sm text-slate-600">
-                    <span>상품 금액</span>
-                    <span className="font-medium">₩{(parseFloat(order.totalAmount) - parseFloat(order.shippingCost)).toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-xs sm:text-sm text-slate-600">
-                    <span>배송비</span>
-                    <span className="font-medium">₩{parseFloat(order.shippingCost).toLocaleString()}</span>
-                  </div>
                   <div className="border-t border-slate-200 pt-2.5 sm:pt-3">
                     <div className="flex justify-between items-center">
                       <span className="text-base sm:text-lg font-bold">총 결제 금액</span>
-                      <span className="text-xl sm:text-2xl font-bold text-violet-600">₩{parseFloat(order.totalAmount).toLocaleString()}</span>
+                      <span className="text-xl sm:text-2xl font-bold text-violet-600">₩{Number(order.totalPrice).toLocaleString()}</span>
                     </div>
                   </div>
                   <div className="pt-2.5 sm:pt-3 border-t border-slate-200">
                     <div className="flex justify-between text-xs sm:text-sm text-slate-600">
                       <span>결제 방법</span>
-                      <span className="font-medium">{order.paymentMethod === 'bank_transfer' ? '무통장입금' : order.paymentMethod}</span>
+                      <span className="font-medium">무통장입금</span>
                     </div>
                   </div>
                 </div>
@@ -518,8 +458,8 @@ export default function OrderDetailPage() {
               <div className="space-y-2.5 sm:space-y-3 pt-4 sm:pt-6 border-t border-slate-200">
                 {isAdmin ? (
                   <>
-                    {/* 예약신청 상태: 입금확인, 취소 */}
-                    {(order.fulfillmentStatus === 'requested' || order.fulfillmentStatus === 'hold_pendingpay') && (
+                    {/* 문의접수/승인 상태: 입금확인, 취소 */}
+                    {(order.status === 'requested' || order.status === 'approved') && (
                       <>
                         <button onClick={handleConfirmPayment} className="btn btn-primary w-full text-sm sm:text-base touch-manipulation">
                           <CheckCircle className="w-5 h-5" />
@@ -532,8 +472,8 @@ export default function OrderDetailPage() {
                       </>
                     )}
 
-                    {/* 확정됨 상태: 취소, 상품발송 */}
-                    {order.fulfillmentStatus === 'confirmed' && (
+                    {/* 예약확정 상태: 취소, 상품발송 */}
+                    {order.status === 'confirmed' && (
                       <>
                         <button onClick={handleDispatchOrder} className="btn btn-primary w-full text-sm sm:text-base touch-manipulation">
                           <Package className="w-5 h-5" />
@@ -547,7 +487,7 @@ export default function OrderDetailPage() {
                     )}
 
                     {/* 배송중 상태: 취소, 회수 */}
-                    {order.fulfillmentStatus === 'dispatched' && (
+                    {order.status === 'dispatched' && (
                       <>
                         <button onClick={handleCollectOrder} className="btn btn-primary w-full text-sm sm:text-base touch-manipulation">
                           <Package className="w-5 h-5" />
@@ -562,8 +502,8 @@ export default function OrderDetailPage() {
                   </>
                 ) : (
                   <>
-                    {/* 사용자: 예약신청/입금대기 상태에서만 취소 가능 */}
-                    {(order.fulfillmentStatus === 'requested' || order.fulfillmentStatus === 'hold_pendingpay') && (
+                    {/* 사용자: 문의접수/승인 상태에서만 취소 가능 */}
+                    {(order.status === 'requested' || order.status === 'approved') && (
                       <button onClick={handleCancelOrder} className="btn btn-outline w-full text-red-600 border-red-300 hover:bg-red-50 text-sm sm:text-base touch-manipulation">
                         <XCircle className="w-5 h-5" />
                         예약 취소
@@ -577,17 +517,20 @@ export default function OrderDetailPage() {
               <div className="p-3 sm:p-4 bg-violet-50 rounded-lg">
                 <p className="text-xs sm:text-sm text-slate-600 space-y-1">
                   <span className="block font-medium text-slate-900">예약 안내</span>
-                  {order.fulfillmentStatus === 'requested' && (
-                    <span className="block">• 관리자 승인 대기 중입니다</span>
+                  {order.status === 'requested' && (
+                    <span className="block">• 문의가 접수되었습니다. 관리자 확인 후 연락드리겠습니다.</span>
                   )}
-                  {order.fulfillmentStatus === 'hold_pendingpay' && (
-                    <span className="block">• 입금 확인 후 예약이 확정됩니다</span>
+                  {order.status === 'approved' && (
+                    <span className="block">• 문의가 승인되었습니다. 입금 확인 후 예약이 확정됩니다.</span>
                   )}
-                  {order.fulfillmentStatus === 'confirmed' && (
-                    <span className="block">• 예약이 확정되었습니다</span>
+                  {order.status === 'confirmed' && (
+                    <span className="block">• 예약이 확정되었습니다.</span>
                   )}
-                  {order.fulfillmentStatus === 'dispatched' && (
-                    <span className="block">• 상품이 발송되었습니다</span>
+                  {order.status === 'dispatched' && (
+                    <span className="block">• 상품이 발송되었습니다.</span>
+                  )}
+                  {order.status === 'completed' && (
+                    <span className="block">• 대여가 완료되었습니다. 이용해 주셔서 감사합니다.</span>
                   )}
                 </p>
               </div>

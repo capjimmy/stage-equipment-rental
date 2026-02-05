@@ -578,7 +578,7 @@ export const orderApi = {
       deliveryNotes: data.deliveryNotes || null,
       status: 'requested',
       totalPrice: cart.items.reduce((sum, item) => {
-        const days = Math.ceil((new Date(data.endDate).getTime() - new Date(data.startDate).getTime()) / (1000 * 60 * 60 * 24));
+        const days = Math.ceil((new Date(data.endDate).getTime() - new Date(data.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
         return sum + (parseFloat(item.product?.baseDailyPrice || '0') * item.quantity * days);
       }, 0),
       createdAt: Timestamp.now(),
@@ -602,7 +602,42 @@ export const orderApi = {
     const q = query(ordersRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
 
-    return snapshot.docs.map(d => convertDoc<Order>(d));
+    const orders: Order[] = [];
+    for (const docSnap of snapshot.docs) {
+      const order = convertDoc<Order>(docSnap);
+      const orderData = docSnap.data();
+
+      // Populate product info for each item
+      if (orderData.items && Array.isArray(orderData.items)) {
+        const populatedItems = await Promise.all(
+          orderData.items.map(async (item: { productId: string; quantity: number; pricePerDay: string | number }) => {
+            try {
+              const productDoc = await getDoc(doc(db, 'products', item.productId));
+              if (productDoc.exists()) {
+                const productData = productDoc.data();
+                return {
+                  ...item,
+                  product: {
+                    id: productDoc.id,
+                    title: productData.title,
+                    baseDailyPrice: productData.baseDailyPrice,
+                    images: productData.images || [],
+                  },
+                };
+              }
+            } catch (error) {
+              console.error('Failed to load product:', item.productId, error);
+            }
+            return item;
+          })
+        );
+        (order as any).items = populatedItems;
+      }
+
+      orders.push(order);
+    }
+
+    return orders;
   },
 
   getOrderById: async (id: string): Promise<Order> => {
@@ -643,7 +678,7 @@ export const adminApi = {
       totalProducts: products.length,
       activeProducts: products.filter(p => p.status === 'active').length,
       totalOrders: orders.length,
-      pendingOrders: orders.filter(o => o.status === 'requested' || o.status === 'pending').length,
+      pendingOrders: orders.filter(o => o.status === 'requested' || o.status === 'approved').length,
       confirmedOrders: orders.filter(o => o.status === 'confirmed').length,
       completedOrders: orders.filter(o => o.status === 'completed').length,
       totalUsers: usersSnapshot.size,
@@ -695,14 +730,52 @@ export const adminApi = {
     const orders: AdminOrder[] = [];
     for (const docSnap of snapshot.docs) {
       const order = convertDoc<AdminOrder>(docSnap);
+      const orderData = docSnap.data();
 
       // Get user info
-      const orderData = docSnap.data();
       if (orderData.userId) {
         const userDoc = await getDoc(doc(db, 'users', orderData.userId));
         if (userDoc.exists()) {
           order.user = convertDoc<User>(userDoc) as any;
         }
+      }
+
+      // Populate product info for each item
+      if (orderData.items && Array.isArray(orderData.items)) {
+        const populatedItems = await Promise.all(
+          orderData.items.map(async (item: { productId: string; quantity: number; pricePerDay: string | number }) => {
+            try {
+              const productDoc = await getDoc(doc(db, 'products', item.productId));
+              if (productDoc.exists()) {
+                const productData = productDoc.data();
+                return {
+                  id: item.productId,
+                  quantity: item.quantity,
+                  pricePerDay: Number(item.pricePerDay),
+                  product: {
+                    id: productDoc.id,
+                    title: productData.title,
+                    baseDailyPrice: productData.baseDailyPrice,
+                    images: productData.images || [],
+                  },
+                };
+              }
+            } catch (error) {
+              console.error('Failed to load product:', item.productId, error);
+            }
+            return {
+              id: item.productId,
+              quantity: item.quantity,
+              pricePerDay: Number(item.pricePerDay),
+              product: {
+                id: item.productId,
+                title: '상품 정보 없음',
+                images: [],
+              },
+            };
+          })
+        );
+        order.items = populatedItems;
       }
 
       orders.push(order);

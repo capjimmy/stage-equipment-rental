@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Package, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
@@ -41,22 +42,26 @@ interface OrdersSectionProps {
 }
 
 const statusMap: Record<string, { label: string; color: string }> = {
-  requested: { label: '예약신청', color: 'bg-yellow-100 text-yellow-700' },
-  hold_pendingpay: { label: '입금대기', color: 'bg-orange-100 text-orange-700' },
-  confirmed: { label: '확정됨', color: 'bg-blue-100 text-blue-700' },
+  requested: { label: '문의접수', color: 'bg-yellow-100 text-yellow-700' },
+  approved: { label: '승인됨', color: 'bg-orange-100 text-orange-700' },
+  confirmed: { label: '예약확정', color: 'bg-blue-100 text-blue-700' },
   preparing: { label: '준비중', color: 'bg-indigo-100 text-indigo-700' },
   dispatched: { label: '배송중', color: 'bg-purple-100 text-purple-700' },
   delivered: { label: '배송완료', color: 'bg-cyan-100 text-cyan-700' },
+  in_use: { label: '사용중', color: 'bg-emerald-100 text-emerald-700' },
   returned: { label: '반납완료', color: 'bg-slate-100 text-slate-700' },
   completed: { label: '완료', color: 'bg-green-100 text-green-700' },
-  inspecting: { label: '검수중', color: 'bg-teal-100 text-teal-700' },
-  inspection_passed: { label: '검수완료', color: 'bg-green-100 text-green-700' },
-  inspection_failed: { label: '검수실패', color: 'bg-rose-100 text-rose-700' },
   rejected: { label: '거절됨', color: 'bg-red-100 text-red-700' },
-  canceled: { label: '취소됨', color: 'bg-red-100 text-red-700' },
   cancelled: { label: '취소됨', color: 'bg-red-100 text-red-700' },
-  expired: { label: '만료됨', color: 'bg-gray-100 text-gray-700' },
 };
+
+// Tab definitions
+const statusTabs = [
+  { key: 'all', label: '전체' },
+  { key: 'pending', label: '진행중', statuses: ['requested', 'approved', 'confirmed', 'preparing', 'dispatched', 'in_use'] },
+  { key: 'completed', label: '완료', statuses: ['completed', 'returned'] },
+  { key: 'cancelled', label: '취소/거절', statuses: ['cancelled', 'rejected'] },
+];
 
 export default function OrdersSection({
   orders,
@@ -67,6 +72,28 @@ export default function OrdersSection({
   onCollectOrder,
   onViewOrderDetail,
 }: OrdersSectionProps) {
+  const [activeTab, setActiveTab] = useState('all');
+
+  // Filter orders based on active tab
+  const filteredOrders = orders.filter(order => {
+    if (activeTab === 'all') return true;
+    const tab = statusTabs.find(t => t.key === activeTab);
+    if (tab?.statuses) {
+      return tab.statuses.includes(order.status);
+    }
+    return true;
+  });
+
+  // Count orders per tab
+  const getTabCount = (tabKey: string) => {
+    if (tabKey === 'all') return orders.length;
+    const tab = statusTabs.find(t => t.key === tabKey);
+    if (tab?.statuses) {
+      return orders.filter(o => tab.statuses.includes(o.status)).length;
+    }
+    return 0;
+  };
+
   if (orders.length === 0) {
     return (
       <div className="card p-12 text-center">
@@ -82,7 +109,31 @@ export default function OrdersSection({
 
   return (
     <div className="space-y-4">
-      {orders.map(order => {
+      {/* Status Tabs */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        {statusTabs.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              activeTab === tab.key
+                ? 'bg-violet-600 text-white'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {tab.label}
+            <span className="ml-1.5 text-xs opacity-75">({getTabCount(tab.key)})</span>
+          </button>
+        ))}
+      </div>
+
+      {filteredOrders.length === 0 ? (
+        <div className="card p-8 text-center">
+          <Package className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+          <p className="text-slate-600">해당 상태의 주문이 없습니다</p>
+        </div>
+      ) : (
+        filteredOrders.map(order => {
         const orderStatus = order.status || 'requested';
         const startDate = order.startDate ? new Date(order.startDate) : null;
         const endDate = order.endDate ? new Date(order.endDate) : null;
@@ -162,7 +213,7 @@ export default function OrdersSection({
               {isAdmin ? (
                 <>
                   {/* 예약신청 상태: 입금확인, 취소, 주문상세 */}
-                  {(orderStatus === 'requested' || orderStatus === 'hold_pendingpay') && (
+                  {(orderStatus === 'requested' || orderStatus === 'approved') && (
                     <>
                       <button
                         onClick={() => onConfirmPayment(order.id)}
@@ -234,7 +285,7 @@ export default function OrdersSection({
                   )}
 
                   {/* 기타 상태: 주문상세만 */}
-                  {!['requested', 'hold_pendingpay', 'confirmed', 'dispatched'].includes(orderStatus) && (
+                  {!['requested', 'approved', 'confirmed', 'dispatched'].includes(orderStatus) && (
                     <button
                       onClick={() => onViewOrderDetail(order.id)}
                       className="btn btn-outline flex-1"
@@ -251,7 +302,7 @@ export default function OrdersSection({
                   >
                     주문 상세
                   </button>
-                  {(orderStatus === 'requested' || orderStatus === 'hold_pendingpay') && (
+                  {(orderStatus === 'requested' || orderStatus === 'approved') && (
                     <button
                       onClick={() => onCancelOrder(order.id)}
                       className="btn btn-outline flex-1 text-red-600 border-red-300 hover:bg-red-50"
@@ -264,7 +315,8 @@ export default function OrdersSection({
             </div>
           </div>
         );
-      })}
+      })
+      )}
     </div>
   );
 }

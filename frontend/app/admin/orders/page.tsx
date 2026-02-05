@@ -503,9 +503,9 @@ export default function AdminOrdersPage() {
                           <div>
                             <p className="font-medium text-orange-800 mb-1">입금 계좌 정보 (고객 안내용)</p>
                             <p className="text-sm text-orange-700">
-                              {settings.bankAccount.bankName} {settings.bankAccount.accountNumber}
+                              {settings.bankAccount.bank} {settings.bankAccount.accountNumber}
                             </p>
-                            <p className="text-sm text-orange-700">예금주: {settings.bankAccount.accountHolder}</p>
+                            <p className="text-sm text-orange-700">예금주: {settings.bankAccount.holder}</p>
                             {order.depositDeadlineAt && (
                               <p className="text-xs text-orange-600 mt-2">
                                 입금 기한: {new Date(order.depositDeadlineAt).toLocaleString('ko-KR')}
