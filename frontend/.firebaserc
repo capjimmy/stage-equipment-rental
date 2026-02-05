@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "stagebox-49312"
+  },
+  "targets": {
+    "stagebox-49312": {
+      "storage": {
+        "stagebox-49312": [
+          "stagebox-49312.firebasestorage.app"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

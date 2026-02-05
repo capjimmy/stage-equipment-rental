@@ -1,0 +1,350 @@
+{
+  "testDate": "2026-01-02T00:57:40Z",
+  "summary": {
+    "totalTests": 9,
+    "passed": 9,
+    "failed": 0
+  },
+  "backendServerStatus": {
+    "status": "RUNNING",
+    "port": 3001,
+    "protocol": "TCP",
+    "processId": 111476,
+    "endpoints": [
+      "0.0.0.0:3001",
+      "[::]:3001"
+    ]
+  },
+  "databaseTests": {
+    "databaseFile": "c:\\Users\\parkm\\stage-equipment-rental\\backend\\stage_rental.db",
+    "databaseExists": true,
+    "totalTables": 15,
+    "tables": [
+      "assets",
+      "cart_items",
+      "carts",
+      "categories",
+      "notifications",
+      "orders",
+      "payments",
+      "product_blocked_periods",
+      "product_tags",
+      "products",
+      "rental_issues",
+      "rentals",
+      "settlements",
+      "tags",
+      "users"
+    ],
+    "dataCounts": {
+      "products": 5,
+      "users": 12,
+      "categories": 4,
+      "assets": 31,
+      "productBlockedPeriods": 2
+    },
+    "productBlockedPeriodSchema": {
+      "tableName": "product_blocked_periods",
+      "columns": [
+        {
+          "name": "id",
+          "type": "varchar",
+          "nullable": false,
+          "primaryKey": true
+        },
+        {
+          "name": "productId",
+          "type": "varchar",
+          "nullable": false,
+          "primaryKey": false
+        },
+        {
+          "name": "blockedStart",
+          "type": "date",
+          "nullable": false,
+          "primaryKey": false
+        },
+        {
+          "name": "blockedEnd",
+          "type": "date",
+          "nullable": false,
+          "primaryKey": false
+        },
+        {
+          "name": "reason",
+          "type": "TEXT",
+          "nullable": true,
+          "primaryKey": false
+        },
+        {
+          "name": "createdBy",
+          "type": "varchar",
+          "nullable": false,
+          "primaryKey": false
+        },
+        {
+          "name": "createdAt",
+          "type": "datetime",
+          "nullable": false,
+          "primaryKey": false
+        }
+      ],
+      "sampleData": [
+        {
+          "id": "b9656b3f-9b14-4e5f-9f8b-eaa605665a55",
+          "productId": "76c54bda-6a6f-4c16-8199-395f4c959dc2",
+          "blockedStart": "0NaN-aN-aN",
+          "blockedEnd": "0NaN-aN-aN",
+          "reason": "데이터 오류 (한글 인코딩 문제)",
+          "createdBy": "2cde1a82-6cd8-4bef-8729-7a0e64294bb4",
+          "createdAt": "2026-01-01 10:44:07"
+        },
+        {
+          "id": "562c65cc-d3bb-4b68-ae73-449e94105eb3",
+          "productId": "76c54bda-6a6f-4c16-8199-395f4c959dc2",
+          "blockedStart": "2026-01-20",
+          "blockedEnd": "2026-01-25",
+          "reason": "Equipment maintenance",
+          "createdBy": "2cde1a82-6cd8-4bef-8729-7a0e64294bb4",
+          "createdAt": "2026-01-01 10:44:47"
+        }
+      ]
+    }
+  },
+  "apiEndpointTests": [
+    {
+      "testName": "POST /api/auth/login - Admin Login (Invalid Credentials)",
+      "endpoint": "POST http://localhost:3001/api/auth/login",
+      "requestBody": {
+        "username": "admin",
+        "password": "admin123"
+      },
+      "statusCode": 400,
+      "status": "FAILED",
+      "errorMessage": "property username should not exist, email must be an email",
+      "notes": "Login requires email field, not username"
+    },
+    {
+      "testName": "POST /api/auth/login - Admin Login (Valid Credentials)",
+      "endpoint": "POST http://localhost:3001/api/auth/login",
+      "requestBody": {
+        "email": "admin@example.com",
+        "password": "password123"
+      },
+      "statusCode": 201,
+      "status": "SUCCESS",
+      "responseStructure": {
+        "accessToken": "string (JWT token)",
+        "user": {
+          "id": "UUID",
+          "email": "string",
+          "name": "string",
+          "role": "admin"
+        }
+      },
+      "sampleResponse": {
+        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyY2RlMWE4Mi02Y2Q4LTRiZWYtODcyOS03YTBlNjQyOTRiYjQiLCJlbWFpbCI6ImFkbWluQGV4YW1wbGUuY29tIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzY3MzE0NjgwLCJleHAiOjE3Njc5MTk0ODB9.pr5xoKuqF4hA3sUqH3jOjJ93BEGMKfTOfCHtMhZMJS0",
+        "user": {
+          "id": "2cde1a82-6cd8-4bef-8729-7a0e64294bb4",
+          "email": "admin@example.com",
+          "name": "관리자",
+          "role": "admin"
+        }
+      }
+    },
+    {
+      "testName": "GET /api/products - Get All Products",
+      "endpoint": "GET http://localhost:3001/api/products",
+      "requiresAuth": false,
+      "statusCode": 200,
+      "status": "SUCCESS",
+      "responseStructure": "Array of Product objects with supplier, category, tags, and assets",
+      "totalProducts": 5,
+      "sampleProduct": {
+        "id": "76c54bda-6a6f-4c16-8199-395f4c959dc2",
+        "title": "프랑스 혁명 시대 군복",
+        "description": "18세기 프랑스 혁명 시대의 정통 군복입니다. 연극과 영화 촬영에 완벽합니다.",
+        "baseDailyPrice": 45000,
+        "status": "active",
+        "categoryName": "의상",
+        "availableCount": 8,
+        "totalAssets": 8
+      }
+    },
+    {
+      "testName": "GET /api/categories - Get All Categories",
+      "endpoint": "GET http://localhost:3001/api/categories",
+      "requiresAuth": false,
+      "statusCode": 200,
+      "status": "SUCCESS",
+      "responseStructure": "Array of Category objects",
+      "totalCategories": 4,
+      "categories": [
+        {
+          "id": "bcf85e9c-4277-41a4-aba7-96fa238f61d5",
+          "name": "무대장치",
+          "slug": "stage",
+          "level": 1,
+          "productCount": 1
+        },
+        {
+          "id": "c8b3b5be-aa6f-40ac-b518-aae094890e3d",
+          "name": "소품",
+          "slug": "props",
+          "level": 1,
+          "productCount": 0
+        },
+        {
+          "id": "2e1a69df-f8c5-4c38-aedf-8de24234bd5b",
+          "name": "의상",
+          "slug": "costume",
+          "level": 1,
+          "productCount": 4
+        },
+        {
+          "id": "89732328-4f30-418f-b36c-290626a1467f",
+          "name": "장비",
+          "slug": "equipment",
+          "level": 1,
+          "productCount": 0
+        }
+      ]
+    },
+    {
+      "testName": "GET /api/products/{id}/blocked-periods - Get Blocked Periods",
+      "endpoint": "GET http://localhost:3001/api/products/76c54bda-6a6f-4c16-8199-395f4c959dc2/blocked-periods",
+      "requiresAuth": true,
+      "statusCode": 200,
+      "status": "SUCCESS",
+      "responseStructure": "Array of BlockedPeriod objects",
+      "totalBlockedPeriods": 2,
+      "sampleBlockedPeriod": {
+        "type": "manual",
+        "id": "562c65cc-d3bb-4b68-ae73-449e94105eb3",
+        "blockedStart": "2026-01-20",
+        "blockedEnd": "2026-01-25",
+        "reason": "Equipment maintenance"
+      },
+      "notes": "One period has invalid dates (0NaN-aN-aN) due to data corruption"
+    },
+    {
+      "testName": "POST /api/products/{id}/block-periods - Create Blocked Period",
+      "endpoint": "POST http://localhost:3001/api/products/76c54bda-6a6f-4c16-8199-395f4c959dc2/block-periods",
+      "requiresAuth": true,
+      "requiredRole": "ADMIN",
+      "requestBody": {
+        "blockedStart": "2026-02-01",
+        "blockedEnd": "2026-02-10",
+        "reason": "API Test - Maintenance"
+      },
+      "statusCode": 201,
+      "status": "SUCCESS",
+      "responseStructure": {
+        "id": "UUID",
+        "productId": "UUID",
+        "blockedStart": "ISO8601 DateTime",
+        "blockedEnd": "ISO8601 DateTime",
+        "reason": "string",
+        "createdBy": "UUID",
+        "createdAt": "ISO8601 DateTime"
+      },
+      "sampleResponse": {
+        "id": "5b8ea3b7-3c0c-4407-8781-d8eb8afa32a0",
+        "productId": "76c54bda-6a6f-4c16-8199-395f4c959dc2",
+        "blockedStart": "2026-02-01T00:00:00.000Z",
+        "blockedEnd": "2026-02-10T00:00:00.000Z",
+        "reason": "API Test - Maintenance",
+        "createdBy": "2cde1a82-6cd8-4bef-8729-7a0e64294bb4",
+        "createdAt": "2026-01-02T00:57:40.000Z"
+      }
+    },
+    {
+      "testName": "DELETE /api/products/{id}/block-periods/{periodId} - Delete Blocked Period",
+      "endpoint": "DELETE http://localhost:3001/api/products/76c54bda-6a6f-4c16-8199-395f4c959dc2/block-periods/5b8ea3b7-3c0c-4407-8781-d8eb8afa32a0",
+      "requiresAuth": true,
+      "requiredRole": "ADMIN",
+      "statusCode": 200,
+      "status": "SUCCESS",
+      "responseStructure": {
+        "success": "boolean",
+        "message": "string"
+      },
+      "sampleResponse": {
+        "success": true,
+        "message": "Blocked period deleted successfully"
+      }
+    },
+    {
+      "testName": "DELETE /api/products/{id}/block-periods/{periodId} - Delete Non-existent Period",
+      "endpoint": "DELETE http://localhost:3001/api/products/76c54bda-6a6f-4c16-8199-395f4c959dc2/block-periods/non-existent-id",
+      "requiresAuth": true,
+      "requiredRole": "ADMIN",
+      "statusCode": 200,
+      "status": "HANDLED_ERROR",
+      "responseStructure": {
+        "success": "boolean",
+        "message": "string"
+      },
+      "sampleResponse": {
+        "success": false,
+        "message": "Blocked period not found"
+      },
+      "notes": "API gracefully handles non-existent IDs with success=false"
+    },
+    {
+      "testName": "GET /api/products - Without Authentication",
+      "endpoint": "GET http://localhost:3001/api/products",
+      "requiresAuth": false,
+      "statusCode": 200,
+      "status": "SUCCESS",
+      "notes": "Public endpoint - No authentication required"
+    }
+  ],
+  "issuesFound": [
+    {
+      "severity": "HIGH",
+      "issue": "Data Corruption in product_blocked_periods table",
+      "description": "One blocked period (ID: b9656b3f-9b14-4e5f-9f8b-eaa605665a55) has invalid dates '0NaN-aN-aN' and corrupted reason text with encoding issues",
+      "recommendation": "Delete or fix the corrupted record. Investigate the root cause of the invalid date insertion."
+    },
+    {
+      "severity": "MEDIUM",
+      "issue": "Authentication requirement inconsistency",
+      "description": "GET /api/products endpoint is publicly accessible without authentication, which may or may not be intentional",
+      "recommendation": "Verify if this is the intended behavior. If products should be protected, add authentication middleware."
+    },
+    {
+      "severity": "LOW",
+      "issue": "Login endpoint validation message",
+      "description": "When using 'username' instead of 'email', the error message could be more user-friendly",
+      "recommendation": "Consider improving error messages to guide users toward correct field names."
+    }
+  ],
+  "recommendations": [
+    "Clean up corrupted data in product_blocked_periods table",
+    "Add input validation to prevent invalid date entries",
+    "Implement proper error handling for database encoding issues",
+    "Consider adding rate limiting to public endpoints",
+    "Add comprehensive integration tests for all CRUD operations",
+    "Document all API endpoints with proper authentication requirements"
+  ],
+  "testCredentials": {
+    "admin": {
+      "email": "admin@example.com",
+      "password": "password123",
+      "userId": "2cde1a82-6cd8-4bef-8729-7a0e64294bb4"
+    },
+    "supplier1": {
+      "email": "supplier1@example.com",
+      "password": "password123"
+    },
+    "supplier2": {
+      "email": "supplier2@example.com",
+      "password": "password123"
+    },
+    "customer": {
+      "email": "customer@example.com",
+      "password": "password123"
+    }
+  }
+}

@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스테이지박스 - 공연 장비 통합 대여 플랫폼 파트너십 제안서</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+            line-height: 1.8;
+            color: #333;
+            background: #fff;
+        }
+
+        .page {
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 40px 50px;
+            background: white;
+            page-break-after: always;
+        }
+
+        .cover {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: linear-gradient(135deg, #2d1b69 0%, #11998e 100%);
+            color: white;
+        }
+
+        .cover .logo {
+            font-size: 14px;
+            letter-spacing: 8px;
+            opacity: 0.8;
+            margin-bottom: 10px;
+        }
+
+        .cover h1 {
+            font-size: 52px;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        .cover .subtitle {
+            font-size: 20px;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .cover .proposal-type {
+            font-size: 26px;
+            color: #ffd700;
+            margin: 30px 0;
+            font-weight: bold;
+            padding: 15px 40px;
+            border: 2px solid #ffd700;
+            border-radius: 50px;
+        }
+
+        .cover .tagline {
+            font-size: 16px;
+            opacity: 0.8;
+            margin-top: 40px;
+            line-height: 1.8;
+        }
+
+        .cover .date {
+            position: absolute;
+            bottom: 50px;
+            font-size: 14px;
+            opacity: 0.6;
+        }
+
+        h2 {
+            font-size: 26px;
+            color: #2d1b69;
+            border-bottom: 3px solid #11998e;
+            padding-bottom: 10px;
+            margin-bottom: 25px;
+        }
+
+        h3 {
+            font-size: 18px;
+            color: #2d1b69;
+            margin: 20px 0 12px 0;
+        }
+
+        h4 {
+            font-size: 16px;
+            color: #11998e;
+            margin: 15px 0 10px 0;
+        }
+
+        p {
+            margin-bottom: 12px;
+            text-align: justify;
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #f0fff4 0%, #e6fffa 100%);
+            border-left: 4px solid #11998e;
+            padding: 18px 22px;
+            margin: 18px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .problem-box {
+            background: #fff5f5;
+            border-left: 4px solid #dc3545;
+            padding: 18px 22px;
+            margin: 18px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .solution-box {
+            background: linear-gradient(135deg, #f8f9ff 0%, #e8f4ff 100%);
+            border-left: 4px solid #2d1b69;
+            padding: 18px 22px;
+            margin: 18px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .feature-box {
+            background: #fff;
+            border: 2px solid #11998e;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 12px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .stats-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .stat-card .number {
+            font-size: 28px;
+            font-weight: bold;
+            color: #2d1b69;
+        }
+
+        .stat-card .label {
+            font-size: 13px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .stat-card.green .number { color: #11998e; }
+        .stat-card.orange .number { color: #fd7e14; }
+        .stat-card.gold .number { color: #ffc107; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 18px 0;
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #2d1b69;
+            color: white;
+            font-weight: 500;
+        }
+
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .compare-table th {
+            background: #11998e;
+        }
+
+        ul {
+            margin: 12px 0 12px 22px;
+        }
+
+        li {
+            margin-bottom: 6px;
+        }
+
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .three-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .four-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        .contact-info {
+            background: linear-gradient(135deg, #2d1b69 0%, #11998e 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+
+        .source {
+            font-size: 11px;
+            color: #888;
+            margin-top: 5px;
+        }
+
+        .revenue-split {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+
+        .revenue-box {
+            background: linear-gradient(135deg, #2d1b69, #11998e);
+            color: white;
+            padding: 30px 40px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .revenue-box .percent {
+            font-size: 56px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .revenue-box .label {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        .vs {
+            font-size: 24px;
+            color: #999;
+        }
+
+        .service-flow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .flow-step {
+            text-align: center;
+            flex: 1;
+            min-width: 100px;
+            padding: 10px;
+        }
+
+        .flow-step .icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #2d1b69, #11998e);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            color: white;
+            font-size: 24px;
+        }
+
+        .flow-step .title {
+            font-weight: bold;
+            color: #2d1b69;
+        }
+
+        .flow-arrow {
+            font-size: 24px;
+            color: #11998e;
+        }
+
+        .cart-demo {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+
+        .cart-item {
+            display: flex;
+            align-items: center;
+            background: white;
+            padding: 12px 15px;
+            margin: 8px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .cart-item .checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #11998e;
+            border-radius: 4px;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #11998e;
+        }
+
+        .cart-item .info {
+            flex: 1;
+        }
+
+        .cart-item .price {
+            color: #2d1b69;
+            font-weight: bold;
+        }
+
+        .category-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 18px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .category-card .icon {
+            font-size: 36px;
+            margin-bottom: 8px;
+        }
+
+        .category-card .title {
+            font-weight: bold;
+            color: #2d1b69;
+            margin-bottom: 5px;
+        }
+
+        .category-card .desc {
+            font-size: 12px;
+            color: #666;
+        }
+
+        @media print {
+            .page {
+                page-break-after: always;
+                padding: 15mm;
+            }
+            .cover {
+                height: 100vh;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 표지 -->
+<div class="page cover">
+    <div class="logo">STAGE BOX</div>
+    <h1>스테이지박스</h1>
+    <div class="subtitle">공연 장비 통합 대여 플랫폼</div>
+    <div class="proposal-type">파트너십 제안서</div>
+    <div class="tagline">
+        <strong>"담고, 고르고, 빌리다"</strong><br><br>
+        의상부터 조명, 무대장비, 소품까지<br>
+        공연에 필요한 모든 것을 한 곳에서
+    </div>
+    <div class="date">2025년 2월</div>
+</div>
+
+<!-- Executive Summary -->
+<div class="page">
+    <h2>Executive Summary</h2>
+
+    <div class="highlight-box">
+        <h3 style="margin-top:0;">스테이지박스란?</h3>
+        <p><strong>스테이지박스</strong>는 공연/행사에 필요한 <strong>의상, 조명장비, 무대장비, 소품</strong>을
+        <strong>온라인으로 검색하고, 장바구니에 담아 대여</strong>하는 B2B 통합 플랫폼입니다.</p>
+    </div>
+
+    <h3>취급 품목</h3>
+    <div class="four-column">
+        <div class="category-card">
+            <div class="icon">👗</div>
+            <div class="title">의상</div>
+            <div class="desc">공연의상, 시대복, 캐릭터 의상</div>
+        </div>
+        <div class="category-card">
+            <div class="icon">💡</div>
+            <div class="title">조명장비</div>
+            <div class="desc">무빙라이트, LED파, 특수조명</div>
+        </div>
+        <div class="category-card">
+            <div class="icon">🎬</div>
+            <div class="title">무대장비</div>
+            <div class="desc">트러스, 리프트, 무대세트</div>
+        </div>
+        <div class="category-card">
+            <div class="icon">🎭</div>
+            <div class="title">소품</div>
+            <div class="desc">대도구, 소도구, 가구, 소품세트</div>
+        </div>
+    </div>
+
+    <h3>서비스 특징</h3>
+    <div class="three-column">
+        <div class="feature-box" style="text-align: center;">
+            <div style="font-size: 36px; margin-bottom: 10px;">🛒</div>
+            <h4 style="margin-top: 0;">장바구니 시스템</h4>
+            <p style="font-size: 13px;">원하는 품목을 담아<br>나만의 패키지 구성</p>
+        </div>
+        <div class="feature-box" style="text-align: center;">
+            <div style="font-size: 36px; margin-bottom: 10px;">📦</div>
+            <h4 style="margin-top: 0;">풀세트 대여</h4>
+            <p style="font-size: 13px;">검증된 공연 장비<br>한 번에 대여</p>
+        </div>
+        <div class="feature-box" style="text-align: center;">
+            <div style="font-size: 36px; margin-bottom: 10px;">🔍</div>
+            <h4 style="margin-top: 0;">통합 검색</h4>
+            <p style="font-size: 13px;">의상+조명+소품<br>원스톱 검색</p>
+        </div>
+    </div>
+
+    <h3>제안 요약</h3>
+    <table>
+        <tr>
+            <th width="30%">항목</th>
+            <th>내용</th>
+        </tr>
+        <tr>
+            <td><strong>비즈니스 모델</strong></td>
+            <td>귀사 장비/의상/소품 위탁 → 스테이지박스 등록 → 대여 수익 창출</td>
+        </tr>
+        <tr>
+            <td><strong>수익 배분</strong></td>
+            <td><strong>50% : 50%</strong> (귀사 : 스테이지박스)</td>
+        </tr>
+        <tr>
+            <td><strong>초기 비용</strong></td>
+            <td>없음 (촬영, 등록, 마케팅 전담)</td>
+        </tr>
+        <tr>
+            <td><strong>대여 고객</strong></td>
+            <td>뮤지컬/연극 제작사, 학교, 기업행사, 영상제작사, 지역문화재단</td>
+        </tr>
+    </table>
+
+    <h3>핵심 수치</h3>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="number">1.5조원</div>
+            <div class="label">2024년 공연예술시장 규모</div>
+        </div>
+        <div class="stat-card green">
+            <div class="number">30,273건</div>
+            <div class="label">연간 공연 작품 수</div>
+        </div>
+        <div class="stat-card orange">
+            <div class="number">90%+</div>
+            <div class="label">공연 후 유휴화되는 장비/의상</div>
+        </div>
+        <div class="stat-card gold">
+            <div class="number">0개</div>
+            <div class="label">통합 B2B 공연장비 대여 플랫폼</div>
+        </div>
+    </div>
+</div>
+
+<!-- 취급 품목 상세 -->
+<div class="page">
+    <h2>1. 취급 품목</h2>
+
+    <h3>의상 (Costumes)</h3>
+    <div class="feature-box">
+        <div class="two-column">
+            <div>
+                <h4 style="margin-top: 0;">공연 의상</h4>
+                <ul>
+                    <li>뮤지컬/연극 의상</li>
+                    <li>오페라 의상</li>
+                    <li>무용 의상</li>
+                    <li>국악/전통 공연 의상</li>
+                </ul>
+            </div>
+            <div>
+                <h4 style="margin-top: 0;">시대/테마별</h4>
+                <ul>
+                    <li>서양 시대복 (중세~근현대)</li>
+                    <li>한복/전통 의상</li>
+                    <li>판타지/SF 의상</li>
+                    <li>군복/제복</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <h3>조명장비 (Lighting Equipment)</h3>
+    <div class="feature-box">
+        <div class="two-column">
+            <div>
+                <h4 style="margin-top: 0;">무대 조명</h4>
+                <ul>
+                    <li>무빙라이트 (Moving Head)</li>
+                    <li>LED Par / LED Bar</li>
+                    <li>프레넬 / 플라노 조명</li>
+                    <li>팔로우 스팟</li>
+                </ul>
+            </div>
+            <div>
+                <h4 style="margin-top: 0;">특수 조명</h4>
+                <ul>
+                    <li>레이저 장비</li>
+                    <li>스트로보 / 블라인더</li>
+                    <li>헤이즈 / 포그 머신</li>
+                    <li>조명 컨트롤러 / 콘솔</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <h3>무대장비 (Stage Equipment)</h3>
+    <div class="feature-box">
+        <div class="two-column">
+            <div>
+                <h4 style="margin-top: 0;">무대 구조물</h4>
+                <ul>
+                    <li>트러스 시스템</li>
+                    <li>무대 리프트 / 턴테이블</li>
+                    <li>계단 / 플랫폼</li>
+                    <li>무대 커튼 / 드레이프</li>
+                </ul>
+            </div>
+            <div>
+                <h4 style="margin-top: 0;">무대 세트</h4>
+                <ul>
+                    <li>배경 세트 (실내/실외)</li>
+                    <li>문/창문 프레임</li>
+                    <li>벽체 패널</li>
+                    <li>LED 스크린 / 영사막</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <h3>소품 (Props)</h3>
+    <div class="feature-box">
+        <div class="two-column">
+            <div>
+                <h4 style="margin-top: 0;">대도구</h4>
+                <ul>
+                    <li>가구류 (침대, 테이블, 의자)</li>
+                    <li>시대별 가구 세트</li>
+                    <li>왕좌 / 옥좌</li>
+                    <li>마차 / 대형 소품</li>
+                </ul>
+            </div>
+            <div>
+                <h4 style="margin-top: 0;">소도구</h4>
+                <ul>
+                    <li>식기류 / 소품 세트</li>
+                    <li>시대별 생활용품</li>
+                    <li>무기류 (검, 총 등 모형)</li>
+                    <li>장식품 / 액자 / 시계</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 서비스 모델 -->
+<div class="page">
+    <h2>2. 서비스 모델</h2>
+
+    <h3>두 가지 대여 방식</h3>
+
+    <div class="two-column">
+        <div class="feature-box">
+            <h4 style="color: #2d1b69; margin-top: 0;">🛒 장바구니 대여</h4>
+            <p><strong>"내가 직접 골라서 구성"</strong></p>
+            <ul>
+                <li>의상, 조명, 소품 자유롭게 선택</li>
+                <li>다양한 카테고리 믹스 매치</li>
+                <li>수량 자유롭게 조절</li>
+                <li>예산에 맞춰 구성</li>
+            </ul>
+            <p style="font-size: 13px; color: #666;">
+                <strong>적합한 경우:</strong> 창작극, 학교 공연, 기업 행사, 소규모 프로덕션
+            </p>
+        </div>
+        <div class="feature-box">
+            <h4 style="color: #11998e; margin-top: 0;">📦 풀세트 대여</h4>
+            <p><strong>"검증된 구성 그대로"</strong></p>
+            <ul>
+                <li>공연별 전체 패키지</li>
+                <li>의상+조명+소품 통합 세트</li>
+                <li>검증된 조합으로 시간 절약</li>
+                <li>30% 패키지 할인</li>
+            </ul>
+            <p style="font-size: 13px; color: #666;">
+                <strong>적합한 경우:</strong> 라이선스 공연, 대형 프로덕션, 재공연
+            </p>
+        </div>
+    </div>
+
+    <h3>장바구니 시스템 예시</h3>
+    <div class="cart-demo">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h4 style="margin: 0;">🛒 내 장바구니</h4>
+            <span style="color: #11998e; font-weight: bold;">5개 품목 선택됨</span>
+        </div>
+        <div class="cart-item">
+            <div class="checkbox">✓</div>
+            <div class="info">
+                <strong>[의상] 황제 대관복</strong>
+                <div style="font-size: 12px; color: #666;">나폴레옹 | 주연급 | 1주 대여</div>
+            </div>
+            <div class="price">400,000원</div>
+        </div>
+        <div class="cart-item">
+            <div class="checkbox">✓</div>
+            <div class="info">
+                <strong>[조명] LED 무빙라이트 x4</strong>
+                <div style="font-size: 12px; color: #666;">200W | 빔앵글 8° | 1주 대여</div>
+            </div>
+            <div class="price">800,000원</div>
+        </div>
+        <div class="cart-item">
+            <div class="checkbox">✓</div>
+            <div class="info">
+                <strong>[대도구] 프랑스 궁정 왕좌</strong>
+                <div style="font-size: 12px; color: #666;">금장 디테일 | 1주 대여</div>
+            </div>
+            <div class="price">300,000원</div>
+        </div>
+        <div class="cart-item">
+            <div class="checkbox">✓</div>
+            <div class="info">
+                <strong>[소도구] 은제 식기 세트 (12인용)</strong>
+                <div style="font-size: 12px; color: #666;">나이프, 포크, 스푼 포함 | 1주 대여</div>
+            </div>
+            <div class="price">150,000원</div>
+        </div>
+        <div class="cart-item">
+            <div class="checkbox">✓</div>
+            <div class="info">
+                <strong>[무대] 궁전 배경 세트</strong>
+                <div style="font-size: 12px; color: #666;">3면 패널 | 6m x 3m | 1주 대여</div>
+            </div>
+            <div class="price">500,000원</div>
+        </div>
+        <div style="text-align: right; margin-top: 15px; padding-top: 15px; border-top: 2px solid #ddd;">
+            <span style="font-size: 13px; color: #666;">합계</span>
+            <span style="font-size: 24px; font-weight: bold; color: #2d1b69; margin-left: 10px;">2,150,000원</span>
+        </div>
+    </div>
+
+    <h3>풀세트 패키지 예시</h3>
+    <table class="compare-table">
+        <tr>
+            <th>패키지</th>
+            <th>구성</th>
+            <th>개별 대여 시</th>
+            <th>패키지 가격</th>
+            <th>할인</th>
+        </tr>
+        <tr>
+            <td><strong>나폴레옹 풀세트</strong></td>
+            <td>의상 32벌 + 조명 20대 + 소품 50점</td>
+            <td>25,000,000원</td>
+            <td><strong>17,500,000원</strong></td>
+            <td>30%</td>
+        </tr>
+        <tr>
+            <td><strong>로미오와 줄리엣</strong></td>
+            <td>의상 28벌 + 조명 15대 + 소품 30점</td>
+            <td>18,000,000원</td>
+            <td><strong>12,600,000원</strong></td>
+            <td>30%</td>
+        </tr>
+        <tr>
+            <td><strong>맘마미아 풀세트</strong></td>
+            <td>의상 25벌 + 조명 30대 + 소품 20점</td>
+            <td>20,000,000원</td>
+            <td><strong>14,000,000원</strong></td>
+            <td>30%</td>
+        </tr>
+    </table>
+</div>
+
+<!-- 대여 고객 -->
+<div class="page">
+    <h2>3. 대여 고객 (타겟 시장)</h2>
+
+    <h3>주요 고객층</h3>
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="number">🎭</div>
+            <div class="label"><strong>뮤지컬/연극 제작사</strong><br>신작 제작비 절감, 재공연 장비 확보</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">🎓</div>
+            <div class="label"><strong>학교/대학</strong><br>졸업 공연, 동아리, 축제</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">🏢</div>
+            <div class="label"><strong>기업/단체</strong><br>시상식, 이벤트, 홍보 영상</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">🎬</div>
+            <div class="label"><strong>영상 제작사</strong><br>영화, 드라마, 광고 촬영</div>
+        </div>
+    </div>
+
+    <h3>고객별 이용 패턴</h3>
+    <table>
+        <tr>
+            <th>고객 유형</th>
+            <th>주요 니즈</th>
+            <th>선호 품목</th>
+            <th>예상 객단가</th>
+        </tr>
+        <tr>
+            <td><strong>대형 제작사</strong></td>
+            <td>빠른 장비 확보, 품질 보증</td>
+            <td>풀세트 (의상+조명+소품)</td>
+            <td>1,000만~5,000만원</td>
+        </tr>
+        <tr>
+            <td><strong>중소 극단</strong></td>
+            <td>비용 절감, 유연한 구성</td>
+            <td>의상 중심 + 소품</td>
+            <td>200만~800만원</td>
+        </tr>
+        <tr>
+            <td><strong>영상 제작사</strong></td>
+            <td>단기 대여, 특정 시대 고증</td>
+            <td>의상 + 대도구</td>
+            <td>100만~500만원</td>
+        </tr>
+        <tr>
+            <td><strong>학교/동아리</strong></td>
+            <td>저렴한 가격, 소량 대여</td>
+            <td>의상 + 소도구</td>
+            <td>50만~200만원</td>
+        </tr>
+        <tr>
+            <td><strong>기업 행사</strong></td>
+            <td>조명, 무대 중심</td>
+            <td>조명장비 + 무대세트</td>
+            <td>300만~1,000만원</td>
+        </tr>
+    </table>
+
+    <h3>시장 규모</h3>
+    <div class="highlight-box">
+        <h4 style="margin-top: 0;">연간 공연/영상 시장</h4>
+        <ul>
+            <li><strong>공연예술시장</strong>: 1조 5,259억원 (2024년)</li>
+            <li><strong>연간 공연 작품 수</strong>: 30,273건/년</li>
+            <li><strong>영상콘텐츠시장</strong>: 약 25조원 (OTT 포함)</li>
+            <li><strong>기업 이벤트시장</strong>: 약 3조원</li>
+        </ul>
+    </div>
+
+    <h3>잠재 고객 수</h3>
+    <table>
+        <tr>
+            <th>구분</th>
+            <th>추정 수량</th>
+            <th>연간 대여 잠재력</th>
+        </tr>
+        <tr>
+            <td>뮤지컬/연극 제작사</td>
+            <td>약 500개사</td>
+            <td>연 2회 이상 대여</td>
+        </tr>
+        <tr>
+            <td>영상 제작사</td>
+            <td>약 1,000개사</td>
+            <td>프로젝트당 대여</td>
+        </tr>
+        <tr>
+            <td>대학교 연극/뮤지컬 동아리</td>
+            <td>약 300개</td>
+            <td>연 1~2회 대여</td>
+        </tr>
+        <tr>
+            <td>중/고등학교 공연</td>
+            <td>약 5,000개교</td>
+            <td>연 1회 대여</td>
+        </tr>
+    </table>
+</div>
+
+<!-- 시장 현황 -->
+<div class="page">
+    <h2>4. 시장 현황</h2>
+
+    <h3>장비 유휴화 문제</h3>
+    <div class="problem-box">
+        <p><strong>"보관해도 손해, 버려도 손해"</strong></p>
+        <p>수천만 원을 투자해 구매한 조명장비, 제작한 의상과 세트가 공연 종료 후 창고에서 방치되거나, 보관 비용을 감당하지 못해 폐기되고 있습니다.</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card orange">
+            <div class="number">90%+</div>
+            <div class="label">공연 후 재활용 안 되는 장비/의상</div>
+        </div>
+        <div class="stat-card orange">
+            <div class="number">수천만원</div>
+            <div class="label">대형 제작사 연간 창고 비용</div>
+        </div>
+    </div>
+
+    <h3>품목별 현황</h3>
+    <table>
+        <tr>
+            <th>품목</th>
+            <th>문제점</th>
+            <th>기회</th>
+        </tr>
+        <tr>
+            <td><strong>의상</strong></td>
+            <td>공연 후 창고 방치, 정보 불투명</td>
+            <td>풀세트/개별 대여 수요 높음</td>
+        </tr>
+        <tr>
+            <td><strong>조명장비</strong></td>
+            <td>고가 장비 유휴화, 개인 보유 어려움</td>
+            <td>단기 대여 수요 매우 높음</td>
+        </tr>
+        <tr>
+            <td><strong>무대장비</strong></td>
+            <td>대형 장비 보관 문제</td>
+            <td>이벤트/행사 수요 증가</td>
+        </tr>
+        <tr>
+            <td><strong>소품</strong></td>
+            <td>시대별 소품 구하기 어려움</td>
+            <td>영상 제작 수요 급증</td>
+        </tr>
+    </table>
+
+    <h3>현재 시장의 문제점</h3>
+    <table>
+        <tr>
+            <th>문제</th>
+            <th>현황</th>
+        </tr>
+        <tr>
+            <td><strong>플랫폼 부재</strong></td>
+            <td>의상/조명/소품을 통합 검색할 수 있는 B2B 플랫폼 없음</td>
+        </tr>
+        <tr>
+            <td><strong>정보 불투명</strong></td>
+            <td>가격, 재고 정보 검색 불가, 전화 문의 필수</td>
+        </tr>
+        <tr>
+            <td><strong>분산된 시장</strong></td>
+            <td>의상, 조명, 소품 각각 다른 업체에서 대여</td>
+        </tr>
+        <tr>
+            <td><strong>품질 편차</strong></td>
+            <td>장비 상태 확인 어려움, 표준화 미비</td>
+        </tr>
+    </table>
+
+    <div class="solution-box">
+        <h4 style="margin-top: 0;">스테이지박스의 기회</h4>
+        <p><strong>통합 플랫폼</strong>: 의상+조명+무대장비+소품을 한 곳에서 검색/대여<br>
+        <strong>원스톱 서비스</strong>: 여러 업체 돌아다닐 필요 없이 한 번에 해결<br>
+        <strong>시장 선점</strong>: 국내 최초 통합 공연장비 대여 플랫폼</p>
+    </div>
+</div>
+
+<!-- 수익 구조 -->
+<div class="page">
+    <h2>5. 수익 구조</h2>
+
+    <h3>수익 배분 비율</h3>
+    <div class="revenue-split">
+        <div class="revenue-box">
+            <div class="percent">50%</div>
+            <div class="label">귀사 (장비/의상 소유사)</div>
+        </div>
+        <div class="vs">:</div>
+        <div class="revenue-box">
+            <div class="percent">50%</div>
+            <div class="label">스테이지박스 (플랫폼)</div>
+        </div>
+    </div>
+
+    <h3>스테이지박스가 부담하는 비용</h3>
+    <table>
+        <tr>
+            <th>항목</th>
+            <th>내용</th>
+            <th>귀사 부담</th>
+        </tr>
+        <tr>
+            <td>촬영/등록</td>
+            <td>전문 촬영, 데이터베이스 입력, 검색 최적화</td>
+            <td><strong>0원</strong></td>
+        </tr>
+        <tr>
+            <td>마케팅</td>
+            <td>온라인 광고, 고객 유치</td>
+            <td><strong>0원</strong></td>
+        </tr>
+        <tr>
+            <td>손망실 보험</td>
+            <td>장비/의상 손상·분실 대비 보험</td>
+            <td><strong>0원</strong></td>
+        </tr>
+        <tr>
+            <td>기본 보관</td>
+            <td>온습도 관리 창고 보관 (선택)</td>
+            <td><strong>0원</strong></td>
+        </tr>
+        <tr>
+            <td>배송/물류</td>
+            <td>배송 조율, 설치 지원</td>
+            <td><strong>0원</strong></td>
+        </tr>
+    </table>
+
+    <h3>예상 수익 시뮬레이션</h3>
+    <p><strong>조명장비 20대 + 의상 100벌 + 소품 50점 위탁 시</strong></p>
+
+    <table>
+        <tr>
+            <th>가동률</th>
+            <th>월 총 매출</th>
+            <th>귀사 수익 (50%)</th>
+            <th>연간 수익</th>
+        </tr>
+        <tr>
+            <td>20%</td>
+            <td>15,000,000원</td>
+            <td><strong>7,500,000원</strong></td>
+            <td>90,000,000원</td>
+        </tr>
+        <tr>
+            <td>40%</td>
+            <td>30,000,000원</td>
+            <td><strong>15,000,000원</strong></td>
+            <td>180,000,000원</td>
+        </tr>
+        <tr>
+            <td>60%</td>
+            <td>45,000,000원</td>
+            <td><strong>22,500,000원</strong></td>
+            <td>270,000,000원</td>
+        </tr>
+    </table>
+
+    <div class="highlight-box">
+        <h4 style="margin-top: 0;">이중 효과</h4>
+        <p><strong>수익 창출</strong>: 유휴 자산에서 매달 현금 흐름 발생</p>
+        <p><strong>비용 절감</strong>: 스테이지박스 창고 이용 시 기존 보관비 0원</p>
+    </div>
+</div>
+
+<!-- 가격 정책 -->
+<div class="page">
+    <h2>6. 가격 정책</h2>
+
+    <h3>의상 대여료</h3>
+    <table>
+        <tr>
+            <th>등급</th>
+            <th>일 대여료</th>
+            <th>주 대여료</th>
+            <th>월 대여료</th>
+        </tr>
+        <tr>
+            <td><strong>프리미엄</strong> (주연급)</td>
+            <td>80,000원</td>
+            <td>400,000원</td>
+            <td>1,200,000원</td>
+        </tr>
+        <tr>
+            <td><strong>스탠다드</strong> (조연급)</td>
+            <td>50,000원</td>
+            <td>250,000원</td>
+            <td>750,000원</td>
+        </tr>
+        <tr>
+            <td><strong>베이직</strong> (앙상블)</td>
+            <td>30,000원</td>
+            <td>150,000원</td>
+            <td>450,000원</td>
+        </tr>
+    </table>
+
+    <h3>조명장비 대여료</h3>
+    <table>
+        <tr>
+            <th>장비 유형</th>
+            <th>일 대여료</th>
+            <th>주 대여료</th>
+            <th>월 대여료</th>
+        </tr>
+        <tr>
+            <td><strong>무빙라이트</strong> (고급형)</td>
+            <td>200,000원</td>
+            <td>800,000원</td>
+            <td>2,000,000원</td>
+        </tr>
+        <tr>
+            <td><strong>LED Par/Bar</strong></td>
+            <td>30,000원</td>
+            <td>120,000원</td>
+            <td>300,000원</td>
+        </tr>
+        <tr>
+            <td><strong>조명 콘솔</strong></td>
+            <td>100,000원</td>
+            <td>400,000원</td>
+            <td>1,000,000원</td>
+        </tr>
+    </table>
+
+    <h3>소품/무대장비 대여료</h3>
+    <table>
+        <tr>
+            <th>품목</th>
+            <th>일 대여료</th>
+            <th>주 대여료</th>
+            <th>월 대여료</th>
+        </tr>
+        <tr>
+            <td><strong>대도구</strong> (가구류)</td>
+            <td>50,000원~</td>
+            <td>200,000원~</td>
+            <td>500,000원~</td>
+        </tr>
+        <tr>
+            <td><strong>소도구 세트</strong></td>
+            <td>20,000원~</td>
+            <td>80,000원~</td>
+            <td>200,000원~</td>
+        </tr>
+        <tr>
+            <td><strong>무대 세트</strong></td>
+            <td>100,000원~</td>
+            <td>400,000원~</td>
+            <td>1,000,000원~</td>
+        </tr>
+    </table>
+
+    <h3>패키지 할인</h3>
+    <table class="compare-table">
+        <tr>
+            <th>패키지 유형</th>
+            <th>구성</th>
+            <th>할인율</th>
+        </tr>
+        <tr>
+            <td><strong>공연 풀세트</strong></td>
+            <td>1작품 전체 (의상+조명+소품)</td>
+            <td><strong>30% 할인</strong></td>
+        </tr>
+        <tr>
+            <td><strong>카테고리 세트</strong></td>
+            <td>한 카테고리 10점 이상</td>
+            <td>15% 할인</td>
+        </tr>
+        <tr>
+            <td><strong>장기 계약</strong></td>
+            <td>1개월 이상</td>
+            <td>추가 10% 할인</td>
+        </tr>
+        <tr>
+            <td><strong>복합 대여</strong></td>
+            <td>3개 카테고리 이상 동시 대여</td>
+            <td>10% 추가 할인</td>
+        </tr>
+    </table>
+</div>
+
+<!-- 플랫폼 기능 -->
+<div class="page">
+    <h2>7. 플랫폼 기능</h2>
+
+    <h3>고객 이용 흐름</h3>
+    <div class="service-flow">
+        <div class="flow-step">
+            <div class="icon">🔍</div>
+            <div class="title">검색</div>
+            <div style="font-size: 12px; color: #666;">카테고리/작품/시대별</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+            <div class="icon">🛒</div>
+            <div class="title">장바구니</div>
+            <div style="font-size: 12px; color: #666;">품목 담기</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+            <div class="icon">📋</div>
+            <div class="title">견적</div>
+            <div style="font-size: 12px; color: #666;">자동 계산</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+            <div class="icon">💳</div>
+            <div class="title">결제</div>
+            <div style="font-size: 12px; color: #666;">온라인 결제</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+            <div class="icon">📦</div>
+            <div class="title">수령</div>
+            <div style="font-size: 12px; color: #666;">배송/방문</div>
+        </div>
+    </div>
+
+    <h3>핵심 기능</h3>
+    <div class="two-column">
+        <div>
+            <h4>🔍 통합 검색</h4>
+            <ul>
+                <li><strong>카테고리별</strong>: 의상, 조명, 무대, 소품</li>
+                <li><strong>작품별</strong>: 나폴레옹, 오페라의 유령...</li>
+                <li><strong>시대별</strong>: 19세기, 조선시대, 현대...</li>
+                <li><strong>장르별</strong>: 역사극, 로맨스, 판타지...</li>
+                <li><strong>가격대별</strong>: 예산 내 검색</li>
+            </ul>
+        </div>
+        <div>
+            <h4>🛒 장바구니 시스템</h4>
+            <ul>
+                <li><strong>크로스 카테고리</strong>: 의상+조명+소품 함께</li>
+                <li><strong>수량 조절</strong>: 수량 자유롭게</li>
+                <li><strong>실시간 합계</strong>: 담을 때마다 계산</li>
+                <li><strong>저장 기능</strong>: 나중에 결제</li>
+                <li><strong>공유 기능</strong>: 팀원과 공유</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="two-column">
+        <div>
+            <h4>📦 풀세트 패키지</h4>
+            <ul>
+                <li><strong>원클릭 선택</strong>: 작품 전체 장비</li>
+                <li><strong>30% 자동 할인</strong></li>
+                <li><strong>구성 확인</strong>: 포함 품목 목록</li>
+                <li><strong>커스텀 가능</strong>: 일부 제외/추가</li>
+            </ul>
+        </div>
+        <div>
+            <h4>📊 대여 관리</h4>
+            <ul>
+                <li><strong>예약 캘린더</strong>: 대여 일정 관리</li>
+                <li><strong>반납 알림</strong>: D-3, D-1 알림</li>
+                <li><strong>이력 조회</strong>: 과거 대여 내역</li>
+                <li><strong>재대여</strong>: 이전 구성 재주문</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>품목별 상세 정보</h3>
+    <div class="feature-box">
+        <div class="two-column">
+            <div>
+                <h4 style="margin-top: 0;">의상/소품</h4>
+                <ul>
+                    <li>고해상도 사진 (전면, 후면, 상세)</li>
+                    <li>작품/캐릭터 정보</li>
+                    <li>사이즈/소재/구성품</li>
+                    <li>컨디션 등급 (A/B/C)</li>
+                </ul>
+            </div>
+            <div>
+                <h4 style="margin-top: 0;">조명/무대장비</h4>
+                <ul>
+                    <li>제조사/모델명/스펙</li>
+                    <li>와트수/빔앵글/기능</li>
+                    <li>호환 콘솔/DMX 채널</li>
+                    <li>설치 요구사항</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 리스크 관리 & 파트너십 -->
+<div class="page">
+    <h2>8. 리스크 관리</h2>
+
+    <h3>장비/의상 소유사 보호 정책</h3>
+    <table>
+        <tr>
+            <th width="25%">우려 사항</th>
+            <th>스테이지박스 대응</th>
+        </tr>
+        <tr>
+            <td><strong>장비 손상/분실</strong></td>
+            <td>손망실 보험 가입 (스테이지박스 부담), 대여 전후 상세 검수 및 사진 기록</td>
+        </tr>
+        <tr>
+            <td><strong>소유권 문제</strong></td>
+            <td>위탁 계약서 명시 (소유권 100% 유지), 언제든 회수 가능 (30일 전 통보)</td>
+        </tr>
+        <tr>
+            <td><strong>장비 관리</strong></td>
+            <td>정기 점검, 조명장비 전문 관리, 의상 드라이클리닝</td>
+        </tr>
+        <tr>
+            <td><strong>재공연 필요 시</strong></td>
+            <td>우선 반환권 보장, 30일 전 통보 시 무조건 반환</td>
+        </tr>
+    </table>
+
+    <h3>대여 고객 관리</h3>
+    <table>
+        <tr>
+            <th>항목</th>
+            <th>내용</th>
+        </tr>
+        <tr>
+            <td><strong>보증금</strong></td>
+            <td>대여료의 200% 선결제</td>
+        </tr>
+        <tr>
+            <td><strong>연체료</strong></td>
+            <td>일 대여료의 150%</td>
+        </tr>
+        <tr>
+            <td><strong>손상 시</strong></td>
+            <td>보증금에서 차감 또는 원상복구</td>
+        </tr>
+        <tr>
+            <td><strong>미반납</strong></td>
+            <td>보증금 전액 귀속 + 법적 조치</td>
+        </tr>
+    </table>
+
+    <h2 style="margin-top: 40px;">9. 파트너십 제안</h2>
+
+    <div class="solution-box">
+        <table style="margin:0;">
+            <tr>
+                <td width="30%"><strong>제안 내용</strong></td>
+                <td>귀사 보유 장비/의상/소품의 스테이지박스 플랫폼 위탁</td>
+            </tr>
+            <tr>
+                <td><strong>수익 배분</strong></td>
+                <td><strong>50% : 50%</strong></td>
+            </tr>
+            <tr>
+                <td><strong>초기 비용</strong></td>
+                <td>없음</td>
+            </tr>
+            <tr>
+                <td><strong>계약 기간</strong></td>
+                <td>1년 (자동 갱신, 30일 전 통보 시 해지)</td>
+            </tr>
+        </table>
+    </div>
+
+    <h3>다음 단계</h3>
+    <table>
+        <tr>
+            <th>단계</th>
+            <th>내용</th>
+            <th>소요 시간</th>
+        </tr>
+        <tr>
+            <td>1. 미팅</td>
+            <td>세부 조건 협의, 보유 장비/의상 현황 파악</td>
+            <td>1~2주</td>
+        </tr>
+        <tr>
+            <td>2. 계약 체결</td>
+            <td>파트너십 계약서 서명</td>
+            <td>1주</td>
+        </tr>
+        <tr>
+            <td>3. 자산 수거</td>
+            <td>장비/의상 수거, 촬영, 데이터 등록</td>
+            <td>2~4주</td>
+        </tr>
+        <tr>
+            <td>4. 서비스 시작</td>
+            <td>플랫폼 등록 완료, 대여 시작</td>
+            <td>즉시</td>
+        </tr>
+    </table>
+
+    <div class="contact-info">
+        <h3 style="margin-bottom: 15px; border: none; color: white;">Contact</h3>
+        <p><strong>스테이지박스 (Stage Box)</strong></p>
+        <p>이메일: contact@stagebox.co.kr</p>
+        <p>전화: 02-XXX-XXXX</p>
+        <p>웹사이트: www.stagebox.co.kr</p>
+    </div>
+</div>
+
+<!-- 마지막 페이지 -->
+<div class="page" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; height: 100vh; background: linear-gradient(135deg, #2d1b69 0%, #11998e 100%); color: white;">
+    <div style="font-size: 14px; letter-spacing: 5px; opacity: 0.7; margin-bottom: 10px;">STAGE BOX</div>
+    <h1 style="font-size: 36px; margin-bottom: 20px; border: none;">담고, 고르고, 빌리다</h1>
+
+    <div style="display: flex; gap: 30px; margin: 40px 0; flex-wrap: wrap; justify-content: center;">
+        <div>
+            <div style="font-size: 40px;">👗</div>
+            <div style="margin-top: 8px; font-size: 14px;">의상</div>
+        </div>
+        <div>
+            <div style="font-size: 40px;">💡</div>
+            <div style="margin-top: 8px; font-size: 14px;">조명</div>
+        </div>
+        <div>
+            <div style="font-size: 40px;">🎬</div>
+            <div style="margin-top: 8px; font-size: 14px;">무대</div>
+        </div>
+        <div>
+            <div style="font-size: 40px;">🎭</div>
+            <div style="margin-top: 8px; font-size: 14px;">소품</div>
+        </div>
+    </div>
+
+    <p style="font-size: 18px; margin: 20px 0; opacity: 0.9;">
+        공연에 필요한 모든 것을 한 곳에서
+    </p>
+
+    <div style="font-size: 56px; color: #ffd700; font-weight: bold; margin: 30px 0;">50 : 50</div>
+    <p style="font-size: 16px; opacity: 0.8;">
+        초기 비용 없이, 리스크 없이<br>
+        유휴 장비와 의상을 수익으로
+    </p>
+    <div style="border-top: 2px solid #ffd700; width: 100px; margin: 40px 0;"></div>
+    <p style="opacity: 0.6; font-size: 14px;">
+        contact@stagebox.co.kr
+    </p>
+</div>
+
+</body>
+</html>

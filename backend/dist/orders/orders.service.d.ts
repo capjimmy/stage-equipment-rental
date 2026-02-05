@@ -1,0 +1,30 @@
+import { Repository } from 'typeorm';
+import { Order, FulfillmentStatus } from '../entities/order.entity';
+import { Rental } from '../entities/rental.entity';
+import { Asset } from '../entities/asset.entity';
+import { Cart } from '../entities/cart.entity';
+import { CartItem } from '../entities/cart-item.entity';
+import { User } from '../entities/user.entity';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { NotificationsService } from '../notifications/notifications.service';
+export declare class OrdersService {
+    private orderRepository;
+    private rentalRepository;
+    private assetRepository;
+    private cartRepository;
+    private cartItemRepository;
+    private userRepository;
+    private notificationsService;
+    constructor(orderRepository: Repository<Order>, rentalRepository: Repository<Rental>, assetRepository: Repository<Asset>, cartRepository: Repository<Cart>, cartItemRepository: Repository<CartItem>, userRepository: Repository<User>, notificationsService: NotificationsService);
+    createFromCart(userId: string, createOrderDto: CreateOrderDto): Promise<Order>;
+    private findAvailableAssets;
+    private calculateShippingCost;
+    findMyOrders(userId: string): Promise<Order[]>;
+    findOne(orderId: string, userId: string): Promise<Order>;
+    findAll(status?: FulfillmentStatus): Promise<Order[]>;
+    cancel(orderId: string, userId: string, reason: string): Promise<Order>;
+    approve(orderId: string): Promise<Order>;
+    confirmPayment(orderId: string): Promise<Order>;
+    dispatch(orderId: string): Promise<Order>;
+    collect(orderId: string): Promise<Order>;
+}

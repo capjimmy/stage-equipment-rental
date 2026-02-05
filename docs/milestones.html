@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스테이지박스 - 개발 마일스톤</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.8);
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+
+        .timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+        }
+
+        .phase {
+            position: relative;
+            margin-bottom: 40px;
+        }
+
+        .phase::before {
+            content: '';
+            position: absolute;
+            left: -33px;
+            top: 8px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            border: 4px solid #667eea;
+        }
+
+        .phase.completed::before {
+            background: #10b981;
+            border-color: #10b981;
+        }
+
+        .phase.in-progress::before {
+            background: #f59e0b;
+            border-color: #f59e0b;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        .phase-card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .phase-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .phase-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        .phase-date {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .phase-description {
+            color: #6b7280;
+            margin-bottom: 16px;
+            line-height: 1.6;
+        }
+
+        .tasks {
+            list-style: none;
+        }
+
+        .task {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .task:last-child {
+            border-bottom: none;
+        }
+
+        .task-status {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .task-status.done {
+            background: #d1fae5;
+            color: #10b981;
+        }
+
+        .task-status.pending {
+            background: #fef3c7;
+            color: #f59e0b;
+        }
+
+        .task-status.future {
+            background: #f3f4f6;
+            color: #9ca3af;
+        }
+
+        .task-name {
+            flex: 1;
+            color: #374151;
+        }
+
+        .task-name.done {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: auto;
+        }
+
+        .status-badge.completed {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        .status-badge.in-progress {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .status-badge.planned {
+            background: #e0e7ff;
+            color: #4f46e5;
+        }
+
+        .summary {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .summary h2 {
+            font-size: 1.3rem;
+            color: #1f2937;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            background: #e5e7eb;
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            background: linear-gradient(90deg, #10b981, #34d399);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 16px;
+            background: #f9fafb;
+            border-radius: 12px;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 스테이지박스</h1>
+        <p class="subtitle">공연 의상 렌탈 플랫폼 개발 마일스톤</p>
+
+        <div class="timeline">
+            <!-- Phase 1: 완료 -->
+            <div class="phase completed">
+                <div class="phase-card">
+                    <div class="phase-header">
+                        <span class="phase-title">📋 Phase 1: 기획 및 설계</span>
+                        <span class="phase-date">2025.01 완료</span>
+                    </div>
+                    <p class="phase-description">서비스 컨셉 정의, 시장조사, 사업계획서 작성</p>
+                    <ul class="tasks">
+                        <li class="task">
+                            <span class="task-status done">✓</span>
+                            <span class="task-name done">시장조사 및 경쟁사 분석</span>
+                            <span class="status-badge completed">완료</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status done">✓</span>
+                            <span class="task-name done">사업 모델 정의 (5:5 수익배분)</span>
+                            <span class="status-badge completed">완료</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status done">✓</span>
+                            <span class="task-name done">사업제안서 작성</span>
+                            <span class="status-badge completed">완료</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status done">✓</span>
+                            <span class="task-name done">UI/UX 설계</span>
+                            <span class="status-badge completed">완료</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Phase 2: 완료 -->
+            <div class="phase completed">
+                <div class="phase-card">
+                    <div class="phase-header">
+                        <span class="phase-title">🛠️ Phase 2: MVP 개발</span>
+                        <span class="phase-date">2025.01 완료</span>
+                    </div>
+                    <p class="phase-description">핵심 기능 개발 - 상품 조회, 장바구니, 주문</p>
+                    <ul class="tasks">
+                        <li class="task">
+                            <span class="task-status done">✓</span>
+                            <span class="task-name done">프론트엔드 개발 (Next.js)</span>
+                            <span class="status-badge completed">완료</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status done">✓</span>
+                            <span class="task-name done">백엔드 API 개발 (NestJS)</span>
+                            <span class="status-badge completed">완료</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status done">✓</span>
+                            <span class="task-name done">데이터베이스 설계</span>
+                            <span class="status-badge completed">완료</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status done">✓</span>
+                            <span class="task-name done">관리자 대시보드</span>
+                            <span class="status-badge completed">완료</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Phase 3: 진행중 -->
+            <div class="phase in-progress">
+                <div class="phase-card">
+                    <div class="phase-header">
+                        <span class="phase-title">☁️ Phase 3: 클라우드 전환</span>
+                        <span class="phase-date">2025.02 진행중</span>
+                    </div>
+                    <p class="phase-description">Firebase 기반 클라우드 인프라 구축</p>
+                    <ul class="tasks">
+                        <li class="task">
+                            <span class="task-status done">✓</span>
+                            <span class="task-name done">Firebase 프로젝트 설정</span>
+                            <span class="status-badge completed">완료</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status done">✓</span>
+                            <span class="task-name done">Firestore 데이터 마이그레이션</span>
+                            <span class="status-badge completed">완료</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status pending">⋯</span>
+                            <span class="task-name">Firebase Hosting 배포</span>
+                            <span class="status-badge in-progress">진행중</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status future">○</span>
+                            <span class="task-name">Firebase Storage 이미지 업로드</span>
+                            <span class="status-badge planned">예정</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Phase 4: 예정 -->
+            <div class="phase">
+                <div class="phase-card">
+                    <div class="phase-header">
+                        <span class="phase-title">🤝 Phase 4: 파트너십 구축</span>
+                        <span class="phase-date">2025.02-03 예정</span>
+                    </div>
+                    <p class="phase-description">의상 보유 업체와의 파트너십 체결</p>
+                    <ul class="tasks">
+                        <li class="task">
+                            <span class="task-status future">○</span>
+                            <span class="task-name">의상 업체 리스트업</span>
+                            <span class="status-badge planned">예정</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status future">○</span>
+                            <span class="task-name">사업제안 미팅</span>
+                            <span class="status-badge planned">예정</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status future">○</span>
+                            <span class="task-name">계약 체결 (1-2개 업체)</span>
+                            <span class="status-badge planned">예정</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status future">○</span>
+                            <span class="task-name">상품 데이터 등록</span>
+                            <span class="status-badge planned">예정</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Phase 5: 예정 -->
+            <div class="phase">
+                <div class="phase-card">
+                    <div class="phase-header">
+                        <span class="phase-title">🚀 Phase 5: 베타 런칭</span>
+                        <span class="phase-date">2025.03-04 예정</span>
+                    </div>
+                    <p class="phase-description">베타 서비스 오픈 및 초기 사용자 확보</p>
+                    <ul class="tasks">
+                        <li class="task">
+                            <span class="task-status future">○</span>
+                            <span class="task-name">결제 시스템 연동</span>
+                            <span class="status-badge planned">예정</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status future">○</span>
+                            <span class="task-name">베타 테스터 모집</span>
+                            <span class="status-badge planned">예정</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status future">○</span>
+                            <span class="task-name">피드백 수집 및 개선</span>
+                            <span class="status-badge planned">예정</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status future">○</span>
+                            <span class="task-name">마케팅 시작</span>
+                            <span class="status-badge planned">예정</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Phase 6: 예정 -->
+            <div class="phase">
+                <div class="phase-card">
+                    <div class="phase-header">
+                        <span class="phase-title">📈 Phase 6: 정식 런칭</span>
+                        <span class="phase-date">2025.05 예정</span>
+                    </div>
+                    <p class="phase-description">정식 서비스 오픈 및 확장</p>
+                    <ul class="tasks">
+                        <li class="task">
+                            <span class="task-status future">○</span>
+                            <span class="task-name">정식 서비스 오픈</span>
+                            <span class="status-badge planned">예정</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status future">○</span>
+                            <span class="task-name">파트너 업체 확대</span>
+                            <span class="status-badge planned">예정</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status future">○</span>
+                            <span class="task-name">풀세트 렌탈 서비스 강화</span>
+                            <span class="status-badge planned">예정</span>
+                        </li>
+                        <li class="task">
+                            <span class="task-status future">○</span>
+                            <span class="task-name">공급자 대시보드 고도화</span>
+                            <span class="status-badge planned">예정</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary">
+            <h2>📊 전체 진행 현황</h2>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: 45%;"></div>
+            </div>
+            <p class="progress-text">전체 진행률: 45%</p>
+
+            <div class="stats">
+                <div class="stat">
+                    <div class="stat-number">2</div>
+                    <div class="stat-label">완료된 Phase</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">1</div>
+                    <div class="stat-label">진행중 Phase</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">3</div>
+                    <div class="stat-label">예정 Phase</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

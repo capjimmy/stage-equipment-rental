@@ -1,0 +1,6 @@
+<svg width="400" height="400" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="400" fill="#EC4899"/>
+  <text x="50%" y="45%" text-anchor="middle" fill="white" font-size="24" font-family="Arial, sans-serif" font-weight="bold">Stage Equipment</text>
+  <text x="50%" y="55%" text-anchor="middle" fill="white" font-size="16" font-family="Arial, sans-serif">Product Image 2</text>
+  <circle cx="200" cy="200" r="80" fill="none" stroke="white" stroke-width="2" opacity="0.3"/>
+</svg>
