@@ -37,7 +37,7 @@ export default function CartPage() {
     const item = cartItems.find(i => i.id === id);
     if (!item || !item.product) return;
 
-    const newQuantity = Math.max(1, Math.min(item.product.availableCount, item.quantity + delta));
+    const newQuantity = Math.max(1, Math.min(item.product.availableCount ?? 99, item.quantity + delta));
 
     try {
       await cartApi.updateQuantity(id, newQuantity);

@@ -171,7 +171,7 @@ function ProductDetailContent() {
                   ₩{parseFloat(product.baseDailyPrice).toLocaleString()}
                   <span className="text-base sm:text-lg text-slate-500 font-normal">/일</span>
                 </div>
-                {product.availableCount > 0 ? (
+                {(product.availableCount ?? 0) > 0 ? (
                   <div className="flex items-center gap-2 text-green-600">
                     <CheckCircle className="w-4 sm:w-5 h-4 sm:h-5" />
                     <span className="text-sm sm:text-base font-medium">대여 가능 ({product.availableCount}개)</span>

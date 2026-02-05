@@ -254,7 +254,7 @@ export default function EditProductPage() {
         title: formData.title,
         description: formData.description,
         categoryId: formData.categoryId,
-        baseDailyPrice: parseFloat(formData.baseDailyPrice),
+        baseDailyPrice: formData.baseDailyPrice,
         images: formData.images,
         detailImages: formData.detailImages,
         status: formData.status as 'active' | 'inactive',

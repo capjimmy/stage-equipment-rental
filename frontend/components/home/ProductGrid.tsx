@@ -8,7 +8,7 @@ interface Product {
   baseDailyPrice: string;
   images?: string[];
   tags?: { id: string; name: string }[];
-  availableCount: number;
+  availableCount?: number;
 }
 
 interface ProductGridProps {

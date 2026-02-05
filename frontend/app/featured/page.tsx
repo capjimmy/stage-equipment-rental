@@ -10,7 +10,7 @@ interface Product {
   id: string;
   title: string;
   baseDailyPrice: string;
-  availableCount: number;
+  availableCount?: number;
   tags?: Array<{ id: string; name: string }>;
 }
 
