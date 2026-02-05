@@ -58,11 +58,13 @@ const convertDoc = <T>(doc: DocumentData): T => {
 // Products API
 export const productApi = {
   getAll: async (options?: { includeUnavailable?: boolean }): Promise<Product[]> => {
+    console.log('[productApi.getAll] Starting...');
     const productsRef = collection(db, 'products');
     // Note: Removed orderBy to avoid composite index requirement
     // Sort client-side instead
     const q = query(productsRef, where('status', '==', 'active'));
     const snapshot = await getDocs(q);
+    console.log('[productApi.getAll] Found', snapshot.docs.length, 'products with status=active');
 
     const products: Product[] = [];
     for (const docSnap of snapshot.docs) {
@@ -96,16 +98,22 @@ export const productApi = {
       return bDate - aDate;
     });
 
+    console.log('[productApi.getAll] Products after processing:', products.length);
+
     // Filter out unavailable products unless includeUnavailable is true
     // Note: undefined availableCount means the product is available (not explicitly set to 0)
     if (!options?.includeUnavailable) {
-      return products.filter(p => p.availableCount === undefined || p.availableCount > 0);
+      const filtered = products.filter(p => p.availableCount === undefined || p.availableCount > 0);
+      console.log('[productApi.getAll] After availability filter:', products.length, '->', filtered.length);
+      return filtered;
     }
 
+    console.log('[productApi.getAll] Returning all', products.length, 'products');
     return products;
   },
 
   search: async (params: SearchParams): Promise<Product[]> => {
+    console.log('[productApi.search] Starting search with params:', params);
     const productsRef = collection(db, 'products');
     let q = query(productsRef, where('status', '==', 'active'));
 
@@ -114,6 +122,7 @@ export const productApi = {
     }
 
     const snapshot = await getDocs(q);
+    console.log('[productApi.search] Found', snapshot.docs.length, 'products with status=active');
     let products: Product[] = [];
 
     for (const docSnap of snapshot.docs) {
@@ -182,14 +191,18 @@ export const productApi = {
       products.push(product);
     }
 
+    console.log('[productApi.search] Products before filtering:', products.length);
+
     // Client-side filtering for search query
     if (params.q) {
       const searchLower = params.q.toLowerCase();
+      console.log('[productApi.search] Filtering by query:', searchLower);
       products = products.filter(p =>
         p.title.toLowerCase().includes(searchLower) ||
         p.description?.toLowerCase().includes(searchLower) ||
         p.tags?.some(t => t.name.toLowerCase().includes(searchLower))
       );
+      console.log('[productApi.search] After query filter:', products.length);
     }
 
     // Filter by tags
@@ -198,13 +211,17 @@ export const productApi = {
       products = products.filter(p =>
         p.tags?.some(t => tagNames.includes(t.name))
       );
+      console.log('[productApi.search] After tags filter:', products.length);
     }
 
     // Filter out unavailable products unless includeUnavailable is true
     if (!params.includeUnavailable) {
+      const beforeFilter = products.length;
       products = products.filter(p => p.availableCount === undefined || p.availableCount > 0);
+      console.log('[productApi.search] After availability filter:', beforeFilter, '->', products.length);
     }
 
+    console.log('[productApi.search] Final result:', products.length, 'products');
     return products;
   },
 
