@@ -15,13 +15,18 @@ import {
   Phone,
   Mail,
   CreditCard,
-  RotateCcw
+  RotateCcw,
+  CheckCircle,
+  Ban,
+  Banknote,
+  AlertCircle
 } from 'lucide-react';
 import AdminLayout from '@/components/AdminLayout';
 import Loading from '@/components/Loading';
 import Toast, { ToastType } from '@/components/Toast';
 import useAdminAuth from '@/hooks/useAdminAuth';
-import { adminApi, orderApi } from '@/lib/api';
+import { adminApi } from '@/lib/api';
+import type { Settings } from '@/types';
 
 // Extended type for display with optional fields
 interface AdminOrder {
@@ -49,6 +54,7 @@ interface AdminOrder {
   adminApprovedAt2?: string | null;
   canceledAt?: string | null;
   cancellationReason?: string | null;
+  rejectionReason?: string | null;
   items?: Array<{
     id?: string;
     productId?: string;
@@ -74,20 +80,28 @@ export default function AdminOrdersPage() {
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectingOrderId, setRejectingOrderId] = useState<string | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
-      const data = await adminApi.getAllOrders();
+      const [ordersData, settingsData] = await Promise.all([
+        adminApi.getAllOrders(),
+        adminApi.getSettings(),
+      ]);
       // Map Firebase data to display format
-      const mappedOrders = data.map((order) => ({
+      const mappedOrders = ordersData.map((order) => ({
         ...order,
         totalAmount: order.totalPrice || 0,
         fulfillmentStatus: order.status || 'requested',
-        paymentStatus: order.status === 'confirmed' ? 'confirmed' : 'pending',
+        paymentStatus: order.status === 'confirmed' ? 'confirmed' : (order.status === 'approved' ? 'pending' : 'pending'),
         items: order.items || [],
       })) as AdminOrder[];
       setOrders(mappedOrders);
+      setSettings(settingsData);
     } catch (error: unknown) {
       console.error('Failed to fetch orders:', error);
       setToast({
@@ -107,13 +121,62 @@ export default function AdminOrdersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isChecking, isAdmin, statusFilter]);
 
-  const confirmPayment = async (orderId: string) => {
-    if (!confirm('입금을 확인하셨습니까? 확인 시 예약이 확정됩니다.')) {
+  // 주문 승인 (입금 대기 상태로)
+  const approveOrder = async (orderId: string) => {
+    if (!settings?.bankAccount) {
+      setToast({ message: '입금 계좌 정보가 설정되지 않았습니다. 설정 페이지에서 먼저 설정해주세요.', type: 'error' });
+      return;
+    }
+
+    if (!confirm('이 주문을 승인하시겠습니까? 고객에게 입금 안내가 전송됩니다.')) {
       return;
     }
 
     try {
-      await adminApi.updateOrderStatus(orderId, 'confirmed');
+      await adminApi.approveOrder(orderId);
+      setToast({ message: '주문이 승인되었습니다. 고객에게 입금 안내가 전송되었습니다.', type: 'success' });
+      fetchOrders();
+    } catch (error) {
+      console.error('Failed to approve order:', error);
+      setToast({ message: '주문 승인 중 오류가 발생했습니다.', type: 'error' });
+    }
+  };
+
+  // 주문 거절 모달 열기
+  const openRejectModal = (orderId: string) => {
+    setRejectingOrderId(orderId);
+    setRejectReason('');
+    setShowRejectModal(true);
+  };
+
+  // 주문 거절 실행
+  const executeReject = async () => {
+    if (!rejectingOrderId || !rejectReason.trim()) {
+      setToast({ message: '거절 사유를 입력해주세요.', type: 'error' });
+      return;
+    }
+
+    try {
+      await adminApi.rejectOrder(rejectingOrderId, rejectReason);
+      setToast({ message: '주문이 거절되었습니다. 고객에게 사유가 전송되었습니다.', type: 'success' });
+      setShowRejectModal(false);
+      setRejectingOrderId(null);
+      setRejectReason('');
+      fetchOrders();
+    } catch (error) {
+      console.error('Failed to reject order:', error);
+      setToast({ message: '주문 거절 중 오류가 발생했습니다.', type: 'error' });
+    }
+  };
+
+  // 입금 확인 (예약 확정)
+  const confirmPayment = async (orderId: string) => {
+    if (!confirm('입금을 확인하셨습니까? 확인 시 예약이 확정되고 해당 날짜가 차단됩니다.')) {
+      return;
+    }
+
+    try {
+      await adminApi.confirmPayment(orderId);
       setToast({ message: '입금이 확인되었습니다. 예약이 확정되었습니다.', type: 'success' });
       fetchOrders();
     } catch (error) {
@@ -122,14 +185,14 @@ export default function AdminOrdersPage() {
     }
   };
 
+  // 주문 취소
   const cancelOrder = async (orderId: string) => {
-    const reason = prompt('취소 사유를 입력해주세요:');
-    if (!reason) {
+    if (!confirm('정말 이 주문을 취소하시겠습니까?')) {
       return;
     }
 
     try {
-      await orderApi.cancel(orderId, reason);
+      await adminApi.cancelOrder(orderId);
       setToast({ message: '주문이 취소되었습니다.', type: 'success' });
       fetchOrders();
     } catch (error) {
@@ -182,15 +245,17 @@ export default function AdminOrdersPage() {
 
   const getStatusInfo = (status: string) => {
     const statusMap: Record<string, { label: string; color: string; border: string }> = {
-      requested: { label: '요청됨', color: 'bg-yellow-100 text-yellow-800', border: 'border-yellow-300' },
-      hold_pendingpay: { label: '입금대기', color: 'bg-orange-100 text-orange-800', border: 'border-orange-300' },
-      confirmed: { label: '입금확인', color: 'bg-blue-100 text-blue-800', border: 'border-blue-300' },
+      requested: { label: '문의접수', color: 'bg-yellow-100 text-yellow-800', border: 'border-yellow-300' },
+      approved: { label: '승인(입금대기)', color: 'bg-orange-100 text-orange-800', border: 'border-orange-300' },
+      confirmed: { label: '예약확정', color: 'bg-blue-100 text-blue-800', border: 'border-blue-300' },
       preparing: { label: '준비중', color: 'bg-purple-100 text-purple-800', border: 'border-purple-300' },
       dispatched: { label: '발송됨', color: 'bg-indigo-100 text-indigo-800', border: 'border-indigo-300' },
       delivered: { label: '배송완료', color: 'bg-teal-100 text-teal-800', border: 'border-teal-300' },
+      in_use: { label: '사용중', color: 'bg-cyan-100 text-cyan-800', border: 'border-cyan-300' },
       returned: { label: '반납완료', color: 'bg-green-100 text-green-800', border: 'border-green-300' },
-      canceled: { label: '취소됨', color: 'bg-red-100 text-red-800', border: 'border-red-300' },
-      expired: { label: '만료됨', color: 'bg-gray-100 text-gray-800', border: 'border-gray-300' },
+      completed: { label: '완료', color: 'bg-emerald-100 text-emerald-800', border: 'border-emerald-300' },
+      rejected: { label: '거절됨', color: 'bg-red-100 text-red-800', border: 'border-red-300' },
+      cancelled: { label: '취소됨', color: 'bg-gray-100 text-gray-800', border: 'border-gray-300' },
     };
     return statusMap[status] || { label: status, color: 'bg-gray-100 text-gray-800', border: 'border-gray-300' };
   };
@@ -254,14 +319,16 @@ export default function AdminOrdersPage() {
                 className="input pl-9 sm:pl-10 text-sm sm:text-base"
               >
                 <option value="all">전체 상태</option>
-                <option value="requested">요청됨</option>
-                <option value="hold_pendingpay">입금대기</option>
-                <option value="confirmed">입금확인</option>
+                <option value="requested">문의접수</option>
+                <option value="approved">승인(입금대기)</option>
+                <option value="confirmed">예약확정</option>
                 <option value="preparing">준비중</option>
                 <option value="dispatched">발송됨</option>
                 <option value="delivered">배송완료</option>
                 <option value="returned">반납완료</option>
-                <option value="canceled">취소됨</option>
+                <option value="completed">완료</option>
+                <option value="rejected">거절됨</option>
+                <option value="cancelled">취소됨</option>
               </select>
             </div>
           </div>
@@ -322,43 +389,74 @@ export default function AdminOrdersPage() {
                           상세
                         </button>
 
-                        {paymentStatus === 'pending' && orderStatus !== 'cancelled' && orderStatus !== 'canceled' && (
-                          <button
-                            onClick={() => confirmPayment(order.id)}
-                            className="btn btn-primary btn-sm text-xs"
-                          >
-                            <CreditCard className="w-4 h-4" />
-                            입금확인
-                          </button>
+                        {/* 문의접수 상태: 승인/거절 버튼 */}
+                        {orderStatus === 'requested' && (
+                          <>
+                            <button
+                              onClick={() => approveOrder(order.id)}
+                              className="btn btn-primary btn-sm text-xs"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              승인
+                            </button>
+                            <button
+                              onClick={() => openRejectModal(order.id)}
+                              className="btn btn-outline btn-sm text-xs text-red-600 border-red-300 hover:bg-red-50"
+                            >
+                              <Ban className="w-4 h-4" />
+                              거절
+                            </button>
+                          </>
                         )}
 
-                        {paymentStatus === 'confirmed' && (orderStatus === 'preparing' || orderStatus === 'confirmed') && (
-                          <button
-                            onClick={() => dispatchOrder(order.id)}
-                            className="btn btn-secondary btn-sm text-xs"
-                          >
-                            <Truck className="w-4 h-4" />
-                            발송처리
-                          </button>
+                        {/* 승인(입금대기) 상태: 입금확인/취소 버튼 */}
+                        {orderStatus === 'approved' && (
+                          <>
+                            <button
+                              onClick={() => confirmPayment(order.id)}
+                              className="btn btn-primary btn-sm text-xs"
+                            >
+                              <Banknote className="w-4 h-4" />
+                              입금확인
+                            </button>
+                            <button
+                              onClick={() => cancelOrder(order.id)}
+                              className="btn btn-outline btn-sm text-xs text-red-600 border-red-300 hover:bg-red-50"
+                            >
+                              <XCircle className="w-4 h-4" />
+                              취소
+                            </button>
+                          </>
                         )}
 
-                        {orderStatus === 'delivered' && (
+                        {/* 예약확정 상태: 발송처리/취소 버튼 */}
+                        {orderStatus === 'confirmed' && (
+                          <>
+                            <button
+                              onClick={() => dispatchOrder(order.id)}
+                              className="btn btn-secondary btn-sm text-xs"
+                            >
+                              <Truck className="w-4 h-4" />
+                              발송처리
+                            </button>
+                            <button
+                              onClick={() => cancelOrder(order.id)}
+                              className="btn btn-outline btn-sm text-xs text-red-600 border-red-300 hover:bg-red-50"
+                            >
+                              <XCircle className="w-4 h-4" />
+                              취소
+                            </button>
+                          </>
+                        )}
+
+                        {/* 발송됨 상태: 회수처리 버튼 */}
+                        {orderStatus === 'dispatched' && (
                           <button
                             onClick={() => collectOrder(order.id)}
                             className="btn btn-secondary btn-sm text-xs"
                           >
                             <RotateCcw className="w-4 h-4" />
                             회수처리
-                          </button>
-                        )}
-
-                        {orderStatus !== 'cancelled' && orderStatus !== 'canceled' && orderStatus !== 'returned' && orderStatus !== 'completed' && (
-                          <button
-                            onClick={() => cancelOrder(order.id)}
-                            className="btn btn-outline btn-sm text-xs text-red-600 border-red-300 hover:bg-red-50"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            취소
                           </button>
                         )}
                       </div>
@@ -396,6 +494,40 @@ export default function AdminOrdersPage() {
                         </p>
                       </div>
                     </div>
+
+                    {/* Bank Account Info for Approved Orders */}
+                    {orderStatus === 'approved' && settings?.bankAccount && (
+                      <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg mb-4">
+                        <div className="flex items-start gap-3">
+                          <Banknote className="w-5 h-5 text-orange-600 mt-0.5" />
+                          <div>
+                            <p className="font-medium text-orange-800 mb-1">입금 계좌 정보 (고객 안내용)</p>
+                            <p className="text-sm text-orange-700">
+                              {settings.bankAccount.bankName} {settings.bankAccount.accountNumber}
+                            </p>
+                            <p className="text-sm text-orange-700">예금주: {settings.bankAccount.accountHolder}</p>
+                            {order.depositDeadlineAt && (
+                              <p className="text-xs text-orange-600 mt-2">
+                                입금 기한: {new Date(order.depositDeadlineAt).toLocaleString('ko-KR')}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Rejected Order Info */}
+                    {orderStatus === 'rejected' && (order.rejectionReason || order.cancellationReason) && (
+                      <div className="p-4 bg-red-50 border border-red-200 rounded-lg mb-4">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+                          <div>
+                            <p className="font-medium text-red-800 mb-1">거절 사유</p>
+                            <p className="text-sm text-red-700">{order.rejectionReason || order.cancellationReason}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Rental Items */}
                     <div className="mb-4">
@@ -598,15 +730,72 @@ export default function AdminOrdersPage() {
                       <span className="text-red-600">취소일시</span>
                       <span className="font-medium">{new Date(selectedOrder.canceledAt).toLocaleString('ko-KR')}</span>
                     </div>
-                    {selectedOrder.cancellationReason && (
+                    {(selectedOrder.cancellationReason || selectedOrder.rejectionReason) && (
                       <div>
                         <span className="text-red-600">취소 사유</span>
-                        <p className="font-medium mt-1">{selectedOrder.cancellationReason}</p>
+                        <p className="font-medium mt-1">{selectedOrder.cancellationReason || selectedOrder.rejectionReason}</p>
                       </div>
                     )}
                   </div>
                 </div>
               )}
+
+              {/* Rejection Info */}
+              {(selectedOrder.fulfillmentStatus === 'rejected' || selectedOrder.status === 'rejected') && selectedOrder.rejectionReason && (
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <h3 className="font-bold mb-3 text-red-800">거절 정보</h3>
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <span className="text-red-600">거절 사유</span>
+                      <p className="font-medium mt-1">{selectedOrder.rejectionReason}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="border-b border-slate-200 p-6">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <Ban className="w-5 h-5 text-red-600" />
+                주문 거절
+              </h2>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-slate-600 mb-4">
+                주문을 거절하시려면 사유를 입력해주세요. 사유는 고객에게 전송됩니다.
+              </p>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="거절 사유를 입력하세요..."
+                className="input w-full h-32 resize-none"
+              />
+            </div>
+            <div className="border-t border-slate-200 p-4 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectingOrderId(null);
+                  setRejectReason('');
+                }}
+                className="btn btn-outline"
+              >
+                취소
+              </button>
+              <button
+                onClick={executeReject}
+                disabled={!rejectReason.trim()}
+                className="btn btn-primary bg-red-600 hover:bg-red-700 disabled:bg-slate-300"
+              >
+                거절하기
+              </button>
             </div>
           </div>
         </div>

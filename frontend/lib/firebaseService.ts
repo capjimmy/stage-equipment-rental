@@ -142,6 +142,53 @@ export const productApi = {
       const tagsSnapshot = await getDocs(tagsRef);
       product.tags = tagsSnapshot.docs.map(d => convertDoc<Tag>(d));
 
+      // Get assets and calculate availability
+      const assetsRef = collection(db, 'products', docSnap.id, 'assets');
+      const assetsSnapshot = await getDocs(assetsRef);
+      const totalAssets = assetsSnapshot.docs.length;
+
+      // If dates are provided, calculate date-based availability
+      if (params.startDate && params.endDate) {
+        let availableCount = 0;
+
+        for (const assetDoc of assetsSnapshot.docs) {
+          const asset = assetDoc.data();
+          if (asset.status !== 'available') continue;
+
+          // Check blocked periods for this asset
+          const blockedRef = collection(db, 'products', docSnap.id, 'assets', assetDoc.id, 'blockedPeriods');
+          const blockedSnapshot = await getDocs(blockedRef);
+
+          let isBlocked = false;
+          for (const blockedDoc of blockedSnapshot.docs) {
+            const blocked = blockedDoc.data();
+            // Check for date overlap
+            if (blocked.startDate <= params.endDate && blocked.endDate >= params.startDate) {
+              isBlocked = true;
+              break;
+            }
+          }
+
+          if (!isBlocked) {
+            availableCount++;
+          }
+        }
+
+        product.availableCount = availableCount;
+        product.isAvailable = availableCount > 0;
+        if (availableCount === 0 && totalAssets > 0) {
+          product.unavailableReason = '선택한 날짜에 모든 자산이 예약됨';
+        }
+      } else {
+        // No dates provided - count available assets
+        const availableAssets = assetsSnapshot.docs.filter(d => {
+          const asset = d.data();
+          return asset.status === 'available';
+        });
+        product.availableCount = availableAssets.length > 0 ? availableAssets.length : (totalAssets > 0 ? totalAssets : undefined);
+        product.isAvailable = product.availableCount === undefined || product.availableCount > 0;
+      }
+
       products.push(product);
     }
 
@@ -164,7 +211,6 @@ export const productApi = {
     }
 
     // Filter out unavailable products unless includeUnavailable is true
-    // Note: undefined availableCount means the product is available (not explicitly set to 0)
     if (!params.includeUnavailable) {
       products = products.filter(p => p.availableCount === undefined || p.availableCount > 0);
     }
@@ -758,7 +804,227 @@ export const adminApi = {
   deleteBlockedPeriod: async (productId: string, periodId: string): Promise<void> => {
     await deleteDoc(doc(db, 'products', productId, 'blockedPeriods', periodId));
   },
+
+  // === Enhanced Asset Management ===
+
+  // 자산 생성 (고유 코드 포함)
+  createAssetWithCode: async (productId: string, data: {
+    assetCode: string;
+    serialNumber?: string;
+    conditionGrade?: string;
+    images?: string[];
+    notes?: string;
+  }): Promise<Asset> => {
+    const assetsRef = collection(db, 'products', productId, 'assets');
+    const docRef = await addDoc(assetsRef, {
+      productId,
+      assetCode: data.assetCode,
+      serialNumber: data.serialNumber || null,
+      conditionGrade: data.conditionGrade || 'A',
+      images: data.images || [],
+      notes: data.notes || null,
+      status: 'available',
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+    const newDoc = await getDoc(docRef);
+    return convertDoc<Asset>(newDoc);
+  },
+
+  // 자산 수정
+  updateAssetById: async (productId: string, assetId: string, data: Partial<Asset>): Promise<Asset> => {
+    const assetRef = doc(db, 'products', productId, 'assets', assetId);
+    await updateDoc(assetRef, {
+      ...data,
+      updatedAt: Timestamp.now(),
+    });
+    const updatedDoc = await getDoc(assetRef);
+    return convertDoc<Asset>(updatedDoc);
+  },
+
+  // 자산 삭제
+  deleteAssetById: async (productId: string, assetId: string): Promise<void> => {
+    await deleteDoc(doc(db, 'products', productId, 'assets', assetId));
+  },
+
+  // 자산의 차단 기간 조회
+  getAssetBlockedPeriods: async (productId: string, assetId: string): Promise<AssetBlockedPeriod[]> => {
+    const blockedRef = collection(db, 'products', productId, 'assets', assetId, 'blockedPeriods');
+    const snapshot = await getDocs(blockedRef);
+    return snapshot.docs.map(d => convertDoc<AssetBlockedPeriod>(d));
+  },
+
+  // 자산에 차단 기간 추가
+  createAssetBlockedPeriod: async (
+    productId: string,
+    assetId: string,
+    data: { startDate: string; endDate: string; reason: 'order' | 'maintenance' | 'manual'; orderId?: string; notes?: string }
+  ): Promise<AssetBlockedPeriod> => {
+    const blockedRef = collection(db, 'products', productId, 'assets', assetId, 'blockedPeriods');
+    const docRef = await addDoc(blockedRef, {
+      assetId,
+      startDate: data.startDate,
+      endDate: data.endDate,
+      reason: data.reason,
+      orderId: data.orderId || null,
+      notes: data.notes || null,
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+    const newDoc = await getDoc(docRef);
+    return convertDoc<AssetBlockedPeriod>(newDoc);
+  },
+
+  // 자산의 차단 기간 삭제
+  deleteAssetBlockedPeriod: async (productId: string, assetId: string, periodId: string): Promise<void> => {
+    await deleteDoc(doc(db, 'products', productId, 'assets', assetId, 'blockedPeriods', periodId));
+  },
+
+  // === Order Workflow ===
+
+  // 주문 승인 (입금 대기 상태로 변경)
+  approveOrder: async (orderId: string): Promise<AdminOrder> => {
+    const orderRef = doc(db, 'orders', orderId);
+    await updateDoc(orderRef, {
+      status: 'approved',
+      approvedAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+    const updatedDoc = await getDoc(orderRef);
+    return convertDoc<AdminOrder>(updatedDoc);
+  },
+
+  // 주문 거절
+  rejectOrder: async (orderId: string, reason: string): Promise<AdminOrder> => {
+    const orderRef = doc(db, 'orders', orderId);
+    await updateDoc(orderRef, {
+      status: 'rejected',
+      rejectionReason: reason,
+      rejectedAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+    const updatedDoc = await getDoc(orderRef);
+
+    // TODO: 사용자에게 알림 전송
+
+    return convertDoc<AdminOrder>(updatedDoc);
+  },
+
+  // 입금 확인 (예약 확정 + 날짜 차단)
+  confirmPayment: async (orderId: string): Promise<AdminOrder> => {
+    const orderRef = doc(db, 'orders', orderId);
+    const orderDoc = await getDoc(orderRef);
+
+    if (!orderDoc.exists()) {
+      throw new Error('Order not found');
+    }
+
+    // 주문 상태 업데이트
+    await updateDoc(orderRef, {
+      status: 'confirmed',
+      confirmedAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+
+    // 각 주문 아이템의 자산에 대해 차단 기간 생성
+    // TODO: 실제 자산 배정 및 차단 기간 생성 로직
+    // 현재는 상품 레벨에서 처리, 추후 자산 레벨로 확장
+
+    const updatedDoc = await getDoc(orderRef);
+    return convertDoc<AdminOrder>(updatedDoc);
+  },
+
+  // 주문 취소
+  cancelOrder: async (orderId: string): Promise<AdminOrder> => {
+    const orderRef = doc(db, 'orders', orderId);
+    await updateDoc(orderRef, {
+      status: 'cancelled',
+      cancelledAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+
+    // TODO: 자산 차단 기간 해제 로직
+
+    const updatedDoc = await getDoc(orderRef);
+    return convertDoc<AdminOrder>(updatedDoc);
+  },
+
+  // === Settings Management ===
+
+  // 설정 조회
+  getSettings: async (): Promise<Settings | null> => {
+    const settingsRef = doc(db, 'settings', 'general');
+    const settingsDoc = await getDoc(settingsRef);
+    if (!settingsDoc.exists()) {
+      return null;
+    }
+    return convertDoc<Settings>(settingsDoc);
+  },
+
+  // 설정 업데이트
+  updateSettings: async (data: Partial<Settings>): Promise<Settings> => {
+    const settingsRef = doc(db, 'settings', 'general');
+    const settingsDoc = await getDoc(settingsRef);
+
+    if (settingsDoc.exists()) {
+      await updateDoc(settingsRef, {
+        ...data,
+        updatedAt: Timestamp.now(),
+      });
+    } else {
+      // 설정 문서가 없으면 생성
+      const { setDoc } = await import('firebase/firestore');
+      await setDoc(settingsRef, {
+        ...data,
+        updatedAt: Timestamp.now(),
+      });
+    }
+
+    const updatedDoc = await getDoc(settingsRef);
+    return convertDoc<Settings>(updatedDoc);
+  },
+
+  // === Availability Checking ===
+
+  // 특정 날짜 범위에 상품의 가용 자산 수 확인
+  getAvailableAssetCount: async (productId: string, startDate: string, endDate: string): Promise<number> => {
+    // 상품의 모든 자산 조회
+    const assetsRef = collection(db, 'products', productId, 'assets');
+    const assetsSnapshot = await getDocs(assetsRef);
+
+    let availableCount = 0;
+
+    for (const assetDoc of assetsSnapshot.docs) {
+      const asset = assetDoc.data();
+
+      // 사용 가능 상태가 아니면 스킵
+      if (asset.status !== 'available') continue;
+
+      // 해당 자산의 차단 기간 확인
+      const blockedRef = collection(db, 'products', productId, 'assets', assetDoc.id, 'blockedPeriods');
+      const blockedSnapshot = await getDocs(blockedRef);
+
+      let isBlocked = false;
+      for (const blockedDoc of blockedSnapshot.docs) {
+        const blocked = blockedDoc.data();
+        // 날짜 범위 겹침 확인
+        if (blocked.startDate <= endDate && blocked.endDate >= startDate) {
+          isBlocked = true;
+          break;
+        }
+      }
+
+      if (!isBlocked) {
+        availableCount++;
+      }
+    }
+
+    return availableCount;
+  },
 };
+
+// Import Settings type
+import type { Settings, AssetBlockedPeriod } from '@/types';
 
 // Image upload helper
 export const uploadImage = async (file: File, path: string): Promise<string> => {

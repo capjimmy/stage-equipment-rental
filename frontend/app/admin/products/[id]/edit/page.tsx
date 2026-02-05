@@ -7,10 +7,11 @@ import AdminLayout from '@/components/AdminLayout';
 import Loading from '@/components/Loading';
 import Toast, { ToastType } from '@/components/Toast';
 import useAdminAuth from '@/hooks/useAdminAuth';
-import { Category, Tag, Asset, BlockedPeriod, ProductFormData } from '@/types';
+import { Category, Tag, Asset, BlockedPeriod, AssetBlockedPeriod, ProductFormData } from '@/types';
 import ProductForm from '@/components/admin/ProductForm';
 import AssetsManagement from '@/components/admin/AssetsManagement';
 import BlockedPeriodsManagement from '@/components/admin/BlockedPeriodsManagement';
+import { uploadImage } from '@/lib/firebaseService';
 
 export default function EditProductPage() {
   const router = useRouter();
@@ -23,6 +24,8 @@ export default function EditProductPage() {
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [blockedPeriods, setBlockedPeriods] = useState<BlockedPeriod[]>([]);
+  const [selectedAssetForBlocked, setSelectedAssetForBlocked] = useState<Asset | null>(null);
+  const [assetBlockedPeriods, setAssetBlockedPeriods] = useState<AssetBlockedPeriod[]>([]);
   const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const [formData, setFormData] = useState<ProductFormData>({
     title: '',
@@ -121,14 +124,14 @@ export default function EditProductPage() {
     }
   };
 
-  const handleAddAsset = async (data: { serialNumber: string; condition: string }) => {
-    if (!data.serialNumber.trim()) {
-      setToast({ message: '시리얼 번호를 입력하세요.', type: 'error' });
+  const handleAddAsset = async (data: { assetCode: string; serialNumber?: string; conditionGrade?: string; images?: string[]; notes?: string }) => {
+    if (!data.assetCode.trim()) {
+      setToast({ message: '자산 코드를 입력하세요.', type: 'error' });
       return;
     }
 
     try {
-      await adminApi.createAsset(productId, data);
+      await adminApi.createAssetWithCode(productId, data);
       setToast({ message: '자산이 추가되었습니다.', type: 'success' });
       fetchData();
     } catch (error: unknown) {
@@ -137,16 +140,75 @@ export default function EditProductPage() {
     }
   };
 
-  const handleDeleteAsset = async (assetId: string) => {
-    if (!confirm('이 자산을 삭제하시겠습니까?')) return;
-
+  const handleUpdateAsset = async (assetId: string, data: Partial<Asset>) => {
     try {
-      await adminApi.deleteAsset(assetId);
+      await adminApi.updateAssetById(productId, assetId, data);
+      setToast({ message: '자산이 수정되었습니다.', type: 'success' });
+      fetchData();
+    } catch (error: unknown) {
+      console.error('Failed to update asset:', error);
+      setToast({ message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || '자산 수정에 실패했습니다.', type: 'error' });
+    }
+  };
+
+  const handleDeleteAsset = async (assetId: string) => {
+    try {
+      await adminApi.deleteAssetById(productId, assetId);
       setToast({ message: '자산이 삭제되었습니다.', type: 'success' });
       fetchData();
     } catch (error: unknown) {
       console.error('Failed to delete asset:', error);
       setToast({ message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || '자산 삭제에 실패했습니다.', type: 'error' });
+    }
+  };
+
+  const handleUploadAssetImage = async (file: File): Promise<string> => {
+    const path = `assets/${productId}/${Date.now()}-${file.name}`;
+    return uploadImage(file, path);
+  };
+
+  const handleViewAssetBlockedPeriods = async (assetId: string) => {
+    const asset = assets.find(a => a.id === assetId);
+    if (!asset) return;
+
+    try {
+      const periods = await adminApi.getAssetBlockedPeriods(productId, assetId);
+      setAssetBlockedPeriods(periods);
+      setSelectedAssetForBlocked(asset);
+    } catch (error) {
+      console.error('Failed to fetch asset blocked periods:', error);
+      setToast({ message: '차단 기간을 불러오는데 실패했습니다.', type: 'error' });
+    }
+  };
+
+  const handleAddAssetBlockedPeriod = async (data: { startDate: string; endDate: string; reason: string; notes?: string }) => {
+    if (!selectedAssetForBlocked) return;
+
+    try {
+      await adminApi.createAssetBlockedPeriod(productId, selectedAssetForBlocked.id, {
+        startDate: data.startDate,
+        endDate: data.endDate,
+        reason: data.reason as 'order' | 'maintenance' | 'manual',
+        notes: data.notes,
+      });
+      setToast({ message: '차단 기간이 추가되었습니다.', type: 'success' });
+      handleViewAssetBlockedPeriods(selectedAssetForBlocked.id);
+    } catch (error: unknown) {
+      console.error('Failed to add asset blocked period:', error);
+      setToast({ message: '차단 기간 추가에 실패했습니다.', type: 'error' });
+    }
+  };
+
+  const handleDeleteAssetBlockedPeriod = async (periodId: string) => {
+    if (!selectedAssetForBlocked) return;
+
+    try {
+      await adminApi.deleteAssetBlockedPeriod(productId, selectedAssetForBlocked.id, periodId);
+      setToast({ message: '차단 기간이 삭제되었습니다.', type: 'success' });
+      handleViewAssetBlockedPeriods(selectedAssetForBlocked.id);
+    } catch (error: unknown) {
+      console.error('Failed to delete asset blocked period:', error);
+      setToast({ message: '차단 기간 삭제에 실패했습니다.', type: 'error' });
     }
   };
 
@@ -246,9 +308,13 @@ export default function EditProductPage() {
 
         <div className="mt-4 sm:mt-6">
           <AssetsManagement
+            productId={productId}
             assets={assets as Asset[]}
             onAddAsset={handleAddAsset}
+            onUpdateAsset={handleUpdateAsset}
             onDeleteAsset={handleDeleteAsset}
+            onUploadImage={handleUploadAssetImage}
+            onViewBlockedPeriods={handleViewAssetBlockedPeriods}
           />
         </div>
 
@@ -267,6 +333,35 @@ export default function EditProductPage() {
           </p>
         </div>
       </div>
+
+      {/* Asset Blocked Periods Modal */}
+      {selectedAssetForBlocked && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-slate-200 p-4 sm:p-6 flex items-center justify-between">
+              <h2 className="text-xl font-bold">자산 차단 기간 관리</h2>
+              <button
+                onClick={() => {
+                  setSelectedAssetForBlocked(null);
+                  setAssetBlockedPeriods([]);
+                }}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 sm:p-6">
+              <BlockedPeriodsManagement
+                blockedPeriods={assetBlockedPeriods}
+                onAddBlockedPeriod={handleAddAssetBlockedPeriod}
+                onDeleteBlockedPeriod={handleDeleteAssetBlockedPeriod}
+                title="자산 차단 기간"
+                assetCode={selectedAssetForBlocked.assetCode || selectedAssetForBlocked.serialNumber}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <Toast

@@ -484,7 +484,7 @@ function SearchPageContent() {
                       </div>
                       {product.available === 0 ? (
                         <div className="text-sm text-orange-600 mb-2">
-                          해당 기간에 선예약이 있습니다
+                          {product.unavailableReason || '해당 기간에 선예약이 있습니다'}
                         </div>
                       ) : null}
                       <div className="flex items-center justify-between pt-3 border-t border-slate-100">

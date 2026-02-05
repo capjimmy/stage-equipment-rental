@@ -356,23 +356,67 @@ function ProductDetailContent() {
               )}
 
               <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">보유 자산 목록</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
-                {product.assets?.map((asset: Asset) => (
-                  <div key={asset.id} className="border border-slate-200 rounded-lg p-3 sm:p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-mono text-sm sm:text-base font-bold">{asset.assetCode}</span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        asset.status === 'available' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                      }`}>
-                        {asset.status === 'available' ? '사용 가능' : '대여중'}
-                      </span>
+              {product.assets && product.assets.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+                  {product.assets.map((asset: Asset) => (
+                    <div key={asset.id} className="border border-slate-200 rounded-lg overflow-hidden">
+                      {/* Asset Image */}
+                      {asset.images && asset.images.length > 0 ? (
+                        <div className="aspect-video bg-slate-100 relative">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={asset.images[0]}
+                            alt={asset.assetCode || '자산 이미지'}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = '/images/placeholder-violet.svg';
+                            }}
+                          />
+                          {asset.images.length > 1 && (
+                            <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                              +{asset.images.length - 1}장
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="aspect-video bg-slate-100 flex items-center justify-center">
+                          <Package className="w-12 h-12 text-slate-300" />
+                        </div>
+                      )}
+                      <div className="p-3 sm:p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-mono text-sm sm:text-base font-bold">{asset.assetCode || asset.serialNumber}</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            asset.status === 'available' ? 'bg-green-100 text-green-700' :
+                            asset.status === 'maintenance' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'
+                          }`}>
+                            {asset.status === 'available' ? '대여가능' :
+                             asset.status === 'maintenance' ? '점검중' : '대여중'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600">
+                          <span className={`px-2 py-0.5 rounded ${
+                            asset.conditionGrade === 'S' ? 'bg-violet-100 text-violet-700' :
+                            asset.conditionGrade === 'A' ? 'bg-blue-100 text-blue-700' :
+                            asset.conditionGrade === 'B' ? 'bg-green-100 text-green-700' :
+                            'bg-slate-100 text-slate-700'
+                          }`}>
+                            {asset.conditionGrade || 'A'}급
+                          </span>
+                          {asset.notes && (
+                            <span className="text-slate-500 truncate">{asset.notes}</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs sm:text-sm text-slate-600">
-                      상태: <span className="font-medium">{asset.conditionGrade}급</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 bg-slate-50 rounded-lg mb-4 sm:mb-6">
+                  <Package className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm text-slate-500">등록된 자산 정보가 없습니다</p>
+                </div>
+              )}
 
               <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">대여 안내</h3>
               <ul className="list-disc list-inside text-slate-600 space-y-2 text-sm sm:text-base">
