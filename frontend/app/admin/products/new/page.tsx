@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, X } from 'lucide-react';
-import { api, categoryApi, tagApi } from '@/lib/api';
+import { adminApi, categoryApi, tagApi } from '@/lib/api';
 import ImageUpload from '@/components/ImageUpload';
 import AdminLayout from '@/components/AdminLayout';
 import Loading from '@/components/Loading';
@@ -107,7 +107,7 @@ export default function NewProductPage() {
     setLoading(true);
 
     try {
-      await api.post('/products', {
+      await adminApi.createProduct({
         title: formData.title,
         description: formData.description,
         categoryId: formData.categoryId,
@@ -122,7 +122,7 @@ export default function NewProductPage() {
       setTimeout(() => router.push('/admin/products'), 1500);
     } catch (error: unknown) {
       console.error('Failed to create product:', error);
-      setToast({ message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || '상품 등록에 실패했습니다.', type: 'error' });
+      setToast({ message: (error as Error).message || '상품 등록에 실패했습니다.', type: 'error' });
     } finally {
       setLoading(false);
     }

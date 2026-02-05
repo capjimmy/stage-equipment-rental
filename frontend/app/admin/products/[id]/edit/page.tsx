@@ -250,22 +250,21 @@ export default function EditProductPage() {
     setLoading(true);
 
     try {
-      await api.put(`/products/${productId}`, {
+      await adminApi.updateProduct(productId, {
         title: formData.title,
         description: formData.description,
         categoryId: formData.categoryId,
         baseDailyPrice: parseFloat(formData.baseDailyPrice),
-        tagIds: formData.tags,
         images: formData.images,
         detailImages: formData.detailImages,
-        status: formData.status,
+        status: formData.status as 'active' | 'inactive',
       });
 
       setToast({ message: '상품이 성공적으로 수정되었습니다.', type: 'success' });
       setTimeout(() => router.push('/admin/products'), 1500);
     } catch (error: unknown) {
       console.error('Failed to update product:', error);
-      setToast({ message: (error as { response?: { data?: { message?: string } } }).response?.data?.message || '상품 수정에 실패했습니다.', type: 'error' });
+      setToast({ message: (error as Error).message || '상품 수정에 실패했습니다.', type: 'error' });
     } finally {
       setLoading(false);
     }

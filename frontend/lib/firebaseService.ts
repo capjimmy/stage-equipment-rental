@@ -708,6 +708,51 @@ export const adminApi = {
     return products;
   },
 
+  createProduct: async (data: {
+    title: string;
+    description: string;
+    categoryId: string;
+    baseDailyPrice: number;
+    tagIds?: string[];
+    images?: string[];
+    detailImages?: string[];
+    status?: string;
+  }): Promise<Product> => {
+    const productsRef = collection(db, 'products');
+    const productData = {
+      title: data.title,
+      description: data.description,
+      categoryId: data.categoryId,
+      baseDailyPrice: data.baseDailyPrice,
+      images: data.images || [],
+      detailImages: data.detailImages || [],
+      status: data.status || 'active',
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    };
+
+    const docRef = await addDoc(productsRef, productData);
+
+    // Add tags as subcollection if provided
+    if (data.tagIds && data.tagIds.length > 0) {
+      const tagsRef = collection(db, 'products', docRef.id, 'tags');
+      for (const tagId of data.tagIds) {
+        const tagDoc = await getDoc(doc(db, 'tags', tagId));
+        if (tagDoc.exists()) {
+          const tagData = tagDoc.data();
+          await addDoc(tagsRef, {
+            id: tagId,
+            name: tagData.name,
+            type: tagData.type || 'other',
+          });
+        }
+      }
+    }
+
+    const newDoc = await getDoc(docRef);
+    return convertDoc<Product>(newDoc);
+  },
+
   updateProduct: async (id: string, data: Partial<Product>): Promise<Product> => {
     const docRef = doc(db, 'products', id);
     await updateDoc(docRef, {
