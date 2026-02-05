@@ -137,38 +137,30 @@ function SearchPageContent() {
 
   // Transform API products to match the expected format
   const displayProducts: DisplayProduct[] = products.map((product: SearchProduct): DisplayProduct => {
-    if (product.availableCount !== undefined) {
-      // This is a real API product
-      const categoryName = typeof product.category === 'object' ? product.category?.name : product.category;
-      const supplierName = typeof product.supplier === 'object' ? product.supplier?.name : product.supplier;
-      return {
-        id: product.id,
-        title: product.title,
-        price: product.baseDailyPrice ? parseFloat(product.baseDailyPrice) : 0,
-        available: product.availableCount,
-        category: categoryName || '의상',
-        condition: product.assets?.[0]?.conditionGrade || 'A',
-        tags: Array.isArray(product.tags) && product.tags.length > 0 && typeof product.tags[0] === 'object'
-          ? (product.tags as Array<{ name: string }>).map((t) => t.name)
-          : (product.tags as string[] || []),
-        supplier: supplierName || '공급자',
-        images: product.images,
-        isAvailable: product.isAvailable,
-      };
-    }
-    // Mock product - convert to DisplayProduct format
     const categoryName = typeof product.category === 'object' ? product.category?.name : product.category;
     const supplierName = typeof product.supplier === 'object' ? product.supplier?.name : product.supplier;
+
+    // Determine available count:
+    // - If availableCount is set, use it
+    // - If availableCount is undefined, treat as available (use assets count or default to 1)
+    const assetsCount = product.assets?.length || 0;
+    const available = product.availableCount !== undefined
+      ? product.availableCount
+      : (product.available !== undefined ? product.available : (assetsCount > 0 ? assetsCount : 1));
+
     return {
       id: product.id,
       title: product.title,
-      price: product.price || 0,
-      available: product.available || 0,
+      price: product.baseDailyPrice ? parseFloat(product.baseDailyPrice) : (product.price || 0),
+      available,
       category: categoryName || '의상',
-      condition: product.condition || 'A',
-      tags: (product.tags as string[]) || [],
+      condition: product.assets?.[0]?.conditionGrade || product.condition || 'A',
+      tags: Array.isArray(product.tags) && product.tags.length > 0 && typeof product.tags[0] === 'object'
+        ? (product.tags as Array<{ name: string }>).map((t) => t.name)
+        : (product.tags as string[] || []),
       supplier: supplierName || '공급자',
       images: product.images,
+      isAvailable: product.isAvailable,
       unavailableReason: product.unavailableReason,
     };
   });

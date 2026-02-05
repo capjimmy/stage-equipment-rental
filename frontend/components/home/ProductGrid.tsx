@@ -66,7 +66,7 @@ export default function ProductGrid({ products }: ProductGridProps) {
                 ) : null}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
                 <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-white px-2 py-1 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-medium">
-                  {product.availableCount}개 가능
+                  {product.availableCount !== undefined ? `${product.availableCount}개 가능` : '대여가능'}
                 </div>
               </div>
               <div className="p-4 md:p-6">
