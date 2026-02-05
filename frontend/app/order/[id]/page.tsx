@@ -6,6 +6,7 @@ import { ArrowLeft, Package, Calendar, MapPin, CreditCard, User, Phone, Mail, Cl
 import Link from 'next/link';
 import { orderApi, adminApi } from '@/lib/api';
 import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 interface OrderItem {
   id?: string;
@@ -139,7 +140,18 @@ export default function OrderDetailPage() {
 
     console.log('[OrderDetailPage] useEffect triggered, orderId:', orderId);
     console.log('[OrderDetailPage] Firebase auth currentUser:', auth.currentUser);
-    loadOrderDetail();
+
+    // Wait for Firebase auth state to be ready
+    let hasLoaded = false;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log('[OrderDetailPage] onAuthStateChanged triggered, user:', user?.uid || 'null', 'hasLoaded:', hasLoaded);
+      if (!hasLoaded) {
+        hasLoaded = true;
+        loadOrderDetail();
+      }
+    });
+
+    return () => unsubscribe();
   }, [orderId, router]);
 
   const handleConfirmPayment = async () => {
