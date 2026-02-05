@@ -75,7 +75,10 @@ export default function MyPage() {
     }
   };
 
-  const handleViewOrderDetail = (orderId: string | number) => router.push(`/order/${orderId}`);
+  const handleViewOrderDetail = (orderId: string | number) => {
+    console.log('[MyPage] handleViewOrderDetail called with orderId:', orderId);
+    router.push(`/order/${orderId}`);
+  };
 
   const handleLogout = () => {
     if (confirm('로그아웃 하시겠습니까?')) {

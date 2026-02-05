@@ -641,14 +641,18 @@ export const orderApi = {
   },
 
   getOrderById: async (id: string): Promise<Order> => {
+    console.log('[firebaseService] getOrderById called with id:', id);
     const docRef = doc(db, 'orders', id);
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) {
+      console.error('[firebaseService] Order not found:', id);
       throw new Error('Order not found');
     }
 
-    return convertDoc<Order>(docSnap);
+    const order = convertDoc<Order>(docSnap);
+    console.log('[firebaseService] Order found:', order);
+    return order;
   },
 
   cancel: async (id: string, reason: string): Promise<Order> => {

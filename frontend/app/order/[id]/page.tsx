@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Package, Calendar, MapPin, CreditCard, User, Phone, Mail, Clock, CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { orderApi, adminApi } from '@/lib/api';
+import { auth } from '@/lib/firebase';
 
 interface OrderItem {
   id?: string;
@@ -54,6 +55,7 @@ export default function OrderDetailPage() {
 
   useEffect(() => {
     const loadOrderDetail = async () => {
+      console.log('[OrderDetailPage] loadOrderDetail started, orderId:', orderId);
       try {
         const userStr = localStorage.getItem('user');
         let adminMode = false;
@@ -62,10 +64,15 @@ export default function OrderDetailPage() {
           const user = JSON.parse(userStr);
           adminMode = user.role === 'admin';
           setIsAdmin(adminMode);
+          console.log('[OrderDetailPage] User found, adminMode:', adminMode);
+        } else {
+          console.log('[OrderDetailPage] No user in localStorage');
         }
 
         // Use Firebase API to get order
+        console.log('[OrderDetailPage] Calling orderApi.getOrderById...');
         const orderData = await orderApi.getOrderById(orderId);
+        console.log('[OrderDetailPage] orderData received:', orderData);
 
         // Get user info if admin
         let orderWithUser = orderData as any;
@@ -121,14 +128,17 @@ export default function OrderDetailPage() {
 
         setOrder(orderWithUser);
       } catch (error) {
-        console.error('Failed to load order:', error);
+        console.error('[OrderDetailPage] Failed to load order:', error);
         alert('주문 정보를 불러오는 중 오류가 발생했습니다.');
         router.push('/mypage');
       } finally {
+        console.log('[OrderDetailPage] loadOrderDetail finished, setting loading to false');
         setLoading(false);
       }
     };
 
+    console.log('[OrderDetailPage] useEffect triggered, orderId:', orderId);
+    console.log('[OrderDetailPage] Firebase auth currentUser:', auth.currentUser);
     loadOrderDetail();
   }, [orderId, router]);
 

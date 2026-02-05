@@ -228,7 +228,10 @@ export default function OrdersSection({
                         취소
                       </button>
                       <button
-                        onClick={() => onViewOrderDetail(order.id)}
+                        onClick={() => {
+                          console.log('[OrdersSection] Admin requested/approved 주문상세 clicked, orderId:', order.id);
+                          onViewOrderDetail(order.id);
+                        }}
                         className="btn btn-outline flex-1"
                       >
                         주문상세
@@ -240,7 +243,10 @@ export default function OrdersSection({
                   {orderStatus === 'confirmed' && (
                     <>
                       <button
-                        onClick={() => onViewOrderDetail(order.id)}
+                        onClick={() => {
+                          console.log('[OrdersSection] Admin confirmed 주문상세 clicked, orderId:', order.id);
+                          onViewOrderDetail(order.id);
+                        }}
                         className="btn btn-outline flex-1"
                       >
                         주문상세
@@ -276,7 +282,10 @@ export default function OrdersSection({
                         회수
                       </button>
                       <button
-                        onClick={() => onViewOrderDetail(order.id)}
+                        onClick={() => {
+                          console.log('[OrdersSection] Admin dispatched 기타 clicked, orderId:', order.id);
+                          onViewOrderDetail(order.id);
+                        }}
                         className="btn btn-outline flex-1"
                       >
                         기타
@@ -287,7 +296,10 @@ export default function OrdersSection({
                   {/* 기타 상태: 주문상세만 */}
                   {!['requested', 'approved', 'confirmed', 'dispatched'].includes(orderStatus) && (
                     <button
-                      onClick={() => onViewOrderDetail(order.id)}
+                      onClick={() => {
+                        console.log('[OrdersSection] Admin 주문상세 clicked, orderId:', order.id);
+                        onViewOrderDetail(order.id);
+                      }}
                       className="btn btn-outline flex-1"
                     >
                       주문상세
@@ -297,7 +309,10 @@ export default function OrdersSection({
               ) : (
                 <>
                   <button
-                    onClick={() => onViewOrderDetail(order.id)}
+                    onClick={() => {
+                      console.log('[OrdersSection] User 주문상세 clicked, orderId:', order.id);
+                      onViewOrderDetail(order.id);
+                    }}
                     className="btn btn-outline flex-1"
                   >
                     주문 상세
