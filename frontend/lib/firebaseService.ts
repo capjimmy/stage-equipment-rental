@@ -59,7 +59,9 @@ const convertDoc = <T>(doc: DocumentData): T => {
 export const productApi = {
   getAll: async (options?: { includeUnavailable?: boolean }): Promise<Product[]> => {
     const productsRef = collection(db, 'products');
-    const q = query(productsRef, where('status', '==', 'active'), orderBy('createdAt', 'desc'));
+    // Note: Removed orderBy to avoid composite index requirement
+    // Sort client-side instead
+    const q = query(productsRef, where('status', '==', 'active'));
     const snapshot = await getDocs(q);
 
     const products: Product[] = [];
@@ -86,6 +88,13 @@ export const productApi = {
 
       products.push(product);
     }
+
+    // Sort by createdAt descending (client-side to avoid composite index)
+    products.sort((a, b) => {
+      const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bDate - aDate;
+    });
 
     // Filter out unavailable products unless includeUnavailable is true
     // Note: undefined availableCount means the product is available (not explicitly set to 0)
