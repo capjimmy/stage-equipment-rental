@@ -107,8 +107,9 @@ export const productApi = {
     }
 
     // Filter out unavailable products unless includeUnavailable is true
+    // Note: undefined availableCount means the product is available (not explicitly set to 0)
     if (!options?.includeUnavailable) {
-      return products.filter(p => (p.availableCount ?? 0) > 0);
+      return products.filter(p => p.availableCount === undefined || p.availableCount > 0);
     }
 
     return products;
@@ -163,8 +164,9 @@ export const productApi = {
     }
 
     // Filter out unavailable products unless includeUnavailable is true
+    // Note: undefined availableCount means the product is available (not explicitly set to 0)
     if (!params.includeUnavailable) {
-      products = products.filter(p => (p.availableCount ?? 0) > 0);
+      products = products.filter(p => p.availableCount === undefined || p.availableCount > 0);
     }
 
     return products;
