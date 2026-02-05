@@ -148,35 +148,41 @@ export const productApi = {
 
       // If dates are provided, calculate date-based availability
       if (params.startDate && params.endDate) {
-        let availableCount = 0;
+        // If no assets defined, treat product as available (legacy products without asset tracking)
+        if (totalAssets === 0) {
+          product.availableCount = undefined;
+          product.isAvailable = true;
+        } else {
+          let availableCount = 0;
 
-        for (const assetDoc of assetsSnapshot.docs) {
-          const asset = assetDoc.data();
-          if (asset.status !== 'available') continue;
+          for (const assetDoc of assetsSnapshot.docs) {
+            const asset = assetDoc.data();
+            if (asset.status !== 'available') continue;
 
-          // Check blocked periods for this asset
-          const blockedRef = collection(db, 'products', docSnap.id, 'assets', assetDoc.id, 'blockedPeriods');
-          const blockedSnapshot = await getDocs(blockedRef);
+            // Check blocked periods for this asset
+            const blockedRef = collection(db, 'products', docSnap.id, 'assets', assetDoc.id, 'blockedPeriods');
+            const blockedSnapshot = await getDocs(blockedRef);
 
-          let isBlocked = false;
-          for (const blockedDoc of blockedSnapshot.docs) {
-            const blocked = blockedDoc.data();
-            // Check for date overlap
-            if (blocked.startDate <= params.endDate && blocked.endDate >= params.startDate) {
-              isBlocked = true;
-              break;
+            let isBlocked = false;
+            for (const blockedDoc of blockedSnapshot.docs) {
+              const blocked = blockedDoc.data();
+              // Check for date overlap
+              if (blocked.startDate <= params.endDate && blocked.endDate >= params.startDate) {
+                isBlocked = true;
+                break;
+              }
+            }
+
+            if (!isBlocked) {
+              availableCount++;
             }
           }
 
-          if (!isBlocked) {
-            availableCount++;
+          product.availableCount = availableCount;
+          product.isAvailable = availableCount > 0;
+          if (availableCount === 0) {
+            product.unavailableReason = '선택한 날짜에 모든 자산이 예약됨';
           }
-        }
-
-        product.availableCount = availableCount;
-        product.isAvailable = availableCount > 0;
-        if (availableCount === 0 && totalAssets > 0) {
-          product.unavailableReason = '선택한 날짜에 모든 자산이 예약됨';
         }
       } else {
         // No dates provided - count available assets
