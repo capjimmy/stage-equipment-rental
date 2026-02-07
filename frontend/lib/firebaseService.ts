@@ -59,37 +59,32 @@ const convertDoc = <T>(doc: DocumentData): T => {
 export const productApi = {
   getAll: async (options?: { includeUnavailable?: boolean }): Promise<Product[]> => {
     const productsRef = collection(db, 'products');
-    // Note: Removed orderBy to avoid composite index requirement
-    // Sort client-side instead
     const q = query(productsRef, where('status', '==', 'active'));
     const snapshot = await getDocs(q);
 
-    const products: Product[] = [];
-    for (const docSnap of snapshot.docs) {
+    // Batch fetch all categories once (instead of N queries)
+    const categoriesSnapshot = await getDocs(collection(db, 'categories'));
+    const categoryMap = new Map<string, Category>();
+    categoriesSnapshot.docs.forEach(d => {
+      categoryMap.set(d.id, convertDoc<Category>(d));
+    });
+
+    // Convert products without fetching subcollections (fast)
+    const products: Product[] = snapshot.docs.map(docSnap => {
       const product = convertDoc<Product>(docSnap);
 
-      // Get category
-      if (product.categoryId) {
-        const categoryDoc = await getDoc(doc(db, 'categories', product.categoryId));
-        if (categoryDoc.exists()) {
-          product.category = convertDoc<Category>(categoryDoc);
-        }
+      // Map category from cache
+      if (product.categoryId && categoryMap.has(product.categoryId)) {
+        product.category = categoryMap.get(product.categoryId);
       }
 
-      // Get tags
-      const tagsRef = collection(db, 'products', docSnap.id, 'tags');
-      const tagsSnapshot = await getDocs(tagsRef);
-      product.tags = tagsSnapshot.docs.map(d => convertDoc<Tag>(d));
+      // For listing, assume available (details fetched on product page)
+      product.isAvailable = true;
 
-      // Get assets
-      const assetsRef = collection(db, 'products', docSnap.id, 'assets');
-      const assetsSnapshot = await getDocs(assetsRef);
-      product.assets = assetsSnapshot.docs.map(d => convertDoc<Asset>(d));
+      return product;
+    });
 
-      products.push(product);
-    }
-
-    // Sort by createdAt descending (client-side to avoid composite index)
+    // Sort by createdAt descending
     products.sort((a, b) => {
       const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -97,7 +92,6 @@ export const productApi = {
     });
 
     // Filter out unavailable products unless includeUnavailable is true
-    // Note: undefined availableCount means the product is available (not explicitly set to 0)
     if (!options?.includeUnavailable) {
       return products.filter(p => p.availableCount === undefined || p.availableCount > 0);
     }
@@ -114,95 +108,36 @@ export const productApi = {
     }
 
     const snapshot = await getDocs(q);
-    let products: Product[] = [];
 
-    for (const docSnap of snapshot.docs) {
+    // Batch fetch all categories once
+    const categoriesSnapshot = await getDocs(collection(db, 'categories'));
+    const categoryMap = new Map<string, Category>();
+    categoriesSnapshot.docs.forEach(d => {
+      categoryMap.set(d.id, convertDoc<Category>(d));
+    });
+
+    // Convert products without fetching subcollections (fast)
+    let products: Product[] = snapshot.docs.map(docSnap => {
       const product = convertDoc<Product>(docSnap);
 
-      // Get category
-      if (product.categoryId) {
-        const categoryDoc = await getDoc(doc(db, 'categories', product.categoryId));
-        if (categoryDoc.exists()) {
-          product.category = convertDoc<Category>(categoryDoc);
-        }
+      // Map category from cache
+      if (product.categoryId && categoryMap.has(product.categoryId)) {
+        product.category = categoryMap.get(product.categoryId);
       }
 
-      // Get tags
-      const tagsRef = collection(db, 'products', docSnap.id, 'tags');
-      const tagsSnapshot = await getDocs(tagsRef);
-      product.tags = tagsSnapshot.docs.map(d => convertDoc<Tag>(d));
+      // For search listing, assume all products are available
+      // Detailed availability is checked on product detail page
+      product.isAvailable = true;
 
-      // Get assets and calculate availability
-      const assetsRef = collection(db, 'products', docSnap.id, 'assets');
-      const assetsSnapshot = await getDocs(assetsRef);
-      const totalAssets = assetsSnapshot.docs.length;
-
-      // If dates are provided, calculate date-based availability
-      if (params.startDate && params.endDate) {
-        // If no assets defined, treat product as available (legacy products without asset tracking)
-        if (totalAssets === 0) {
-          product.availableCount = undefined;
-          product.isAvailable = true;
-        } else {
-          let availableCount = 0;
-
-          for (const assetDoc of assetsSnapshot.docs) {
-            const asset = assetDoc.data();
-            if (asset.status !== 'available') continue;
-
-            // Check blocked periods for this asset
-            const blockedRef = collection(db, 'products', docSnap.id, 'assets', assetDoc.id, 'blockedPeriods');
-            const blockedSnapshot = await getDocs(blockedRef);
-
-            let isBlocked = false;
-            for (const blockedDoc of blockedSnapshot.docs) {
-              const blocked = blockedDoc.data();
-              // Check for date overlap
-              if (blocked.startDate <= params.endDate && blocked.endDate >= params.startDate) {
-                isBlocked = true;
-                break;
-              }
-            }
-
-            if (!isBlocked) {
-              availableCount++;
-            }
-          }
-
-          product.availableCount = availableCount;
-          product.isAvailable = availableCount > 0;
-          if (availableCount === 0) {
-            product.unavailableReason = '선택한 날짜에 모든 자산이 예약됨';
-          }
-        }
-      } else {
-        // No dates provided - count available assets
-        const availableAssets = assetsSnapshot.docs.filter(d => {
-          const asset = d.data();
-          return asset.status === 'available';
-        });
-        product.availableCount = availableAssets.length > 0 ? availableAssets.length : (totalAssets > 0 ? totalAssets : undefined);
-        product.isAvailable = product.availableCount === undefined || product.availableCount > 0;
-      }
-
-      products.push(product);
-    }
+      return product;
+    });
 
     // Client-side filtering for search query
     if (params.q) {
       const searchLower = params.q.toLowerCase();
       products = products.filter(p =>
         p.title.toLowerCase().includes(searchLower) ||
-        p.description?.toLowerCase().includes(searchLower) ||
-        p.tags?.some(t => t.name.toLowerCase().includes(searchLower))
-      );
-    }
-
-    // Filter by tags
-    if (params.tags) {
-      const tagNames = params.tags.split(',');
-      products = products.filter(p =>
-        p.tags?.some(t => tagNames.includes(t.name))
+        p.description?.toLowerCase().includes(searchLower)
       );
     }
 

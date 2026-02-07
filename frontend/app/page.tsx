@@ -160,24 +160,23 @@ export default function Home() {
             <div>
               <h5 className="font-bold mb-3 md:mb-4 text-sm md:text-base">서비스</h5>
               <ul className="space-y-1.5 md:space-y-2 text-xs md:text-sm text-slate-600">
-                <li><Link href="/search">검색</Link></li>
-                <li><Link href="/categories">카테고리</Link></li>
-                <li><Link href="/suppliers">공급자</Link></li>
+                <li><Link href="/search">장비 검색</Link></li>
+                <li><Link href="/cart">장바구니</Link></li>
+                <li><Link href="/mypage">마이페이지</Link></li>
               </ul>
             </div>
             <div>
               <h5 className="font-bold mb-3 md:mb-4 text-sm md:text-base">고객지원</h5>
               <ul className="space-y-1.5 md:space-y-2 text-xs md:text-sm text-slate-600">
-                <li><Link href="/faq">FAQ</Link></li>
-                <li><Link href="/contact">문의하기</Link></li>
-                <li><Link href="/terms">이용약관</Link></li>
+                <li><span className="cursor-default">이메일: support@stagebox.com</span></li>
+                <li><span className="cursor-default">전화: 02-1234-5678</span></li>
               </ul>
             </div>
             <div>
-              <h5 className="font-bold mb-3 md:mb-4 text-sm md:text-base">파트너</h5>
+              <h5 className="font-bold mb-3 md:mb-4 text-sm md:text-base">계정</h5>
               <ul className="space-y-1.5 md:space-y-2 text-xs md:text-sm text-slate-600">
-                <li><Link href="/supplier/register">공급자 등록</Link></li>
-                <li><Link href="/supplier/dashboard">공급자 대시보드</Link></li>
+                <li><Link href="/login">로그인</Link></li>
+                <li><Link href="/register">회원가입</Link></li>
               </ul>
             </div>
           </div>
