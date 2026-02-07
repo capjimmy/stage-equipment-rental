@@ -273,6 +273,8 @@ export interface FeaturedSet {
   description: string;
   detailedDescription?: string;
   imageUrl: string;
+  detailImages?: string[];
+  videos?: string[];
   productIds: string[];
   order: number;
   isActive: boolean;

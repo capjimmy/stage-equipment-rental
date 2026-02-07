@@ -13,6 +13,8 @@ interface FeaturedSet {
   description: string;
   detailedDescription?: string;
   imageUrl: string;
+  detailImages?: string[];
+  videos?: string[];
   productIds: string[];
   order: number;
   isActive: boolean;
@@ -188,6 +190,69 @@ export default function FeaturedSetDetailPage() {
               <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">
                 {set.detailedDescription}
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Images Gallery */}
+      {set.detailImages && set.detailImages.length > 0 && (
+        <div className="container mx-auto px-4 md:px-6 py-6">
+          <div className="card p-6">
+            <h2 className="text-2xl font-bold mb-4">상세 이미지</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {set.detailImages.map((imageUrl, index) => (
+                <div key={index} className="relative aspect-square overflow-hidden rounded-lg bg-slate-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imageUrl}
+                    alt={`${set.title} 상세 이미지 ${index + 1}`}
+                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-300 cursor-pointer"
+                    onClick={() => window.open(imageUrl, '_blank')}
+                    onError={(e) => {
+                      e.currentTarget.src = '/images/placeholder-pink.svg';
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Videos */}
+      {set.videos && set.videos.length > 0 && (
+        <div className="container mx-auto px-4 md:px-6 py-6">
+          <div className="card p-6">
+            <h2 className="text-2xl font-bold mb-4">영상</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {set.videos.map((videoUrl, index) => {
+                const getEmbedUrl = (url: string) => {
+                  // YouTube
+                  const youtubeMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+                  if (youtubeMatch) {
+                    return `https://www.youtube.com/embed/${youtubeMatch[1]}`;
+                  }
+                  // Vimeo
+                  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+                  if (vimeoMatch) {
+                    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+                  }
+                  return url;
+                };
+
+                return (
+                  <div key={index} className="relative aspect-video overflow-hidden rounded-lg bg-slate-900">
+                    <iframe
+                      src={getEmbedUrl(videoUrl)}
+                      title={`${set.title} 영상 ${index + 1}`}
+                      className="absolute inset-0 w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

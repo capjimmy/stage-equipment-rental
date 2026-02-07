@@ -15,6 +15,8 @@ interface FeaturedSet {
   description: string;
   detailedDescription?: string;
   imageUrl: string;
+  detailImages?: string[];
+  videos?: string[];
   productIds: string[];
   order: number;
   isActive: boolean;
@@ -33,6 +35,11 @@ export default function FeaturedSetsManagementPage() {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const [detailImageFiles, setDetailImageFiles] = useState<File[]>([]);
+  const [detailImagePreviews, setDetailImagePreviews] = useState<string[]>([]);
+  const [existingDetailImages, setExistingDetailImages] = useState<string[]>([]);
+  const [videoUrls, setVideoUrls] = useState<string[]>([]);
+  const [newVideoUrl, setNewVideoUrl] = useState('');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -93,11 +100,20 @@ export default function FeaturedSetsManagementPage() {
         imageUrl = await uploadImage(imageFile, 'featured-sets');
       }
 
+      // Upload detail images
+      const uploadedDetailImages: string[] = [...existingDetailImages];
+      for (const file of detailImageFiles) {
+        const url = await uploadImage(file, 'featured-sets/details');
+        uploadedDetailImages.push(url);
+      }
+
       const setData = {
         title: formData.title,
         description: formData.description,
         detailedDescription: formData.detailedDescription,
         imageUrl: imageUrl || '/images/placeholder.svg',
+        detailImages: uploadedDetailImages,
+        videos: videoUrls.filter(url => url.trim() !== ''),
         productIds: selectedProducts,
         order: formData.order,
         isActive: formData.isActive,
@@ -131,6 +147,10 @@ export default function FeaturedSetsManagementPage() {
     });
     setSelectedProducts(set.productIds || []);
     setImagePreview(set.imageUrl);
+    setExistingDetailImages(set.detailImages || []);
+    setDetailImagePreviews([]);
+    setDetailImageFiles([]);
+    setVideoUrls(set.videos || []);
     setShowAddForm(true);
   };
 
@@ -197,6 +217,46 @@ export default function FeaturedSetsManagementPage() {
     setSelectedProducts([]);
     setImageFile(null);
     setImagePreview('');
+    setDetailImageFiles([]);
+    setDetailImagePreviews([]);
+    setExistingDetailImages([]);
+    setVideoUrls([]);
+    setNewVideoUrl('');
+  };
+
+  const handleDetailImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setDetailImageFiles(prev => [...prev, ...files]);
+
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setDetailImagePreviews(prev => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const removeDetailImage = (index: number, isExisting: boolean) => {
+    if (isExisting) {
+      setExistingDetailImages(prev => prev.filter((_, i) => i !== index));
+    } else {
+      setDetailImageFiles(prev => prev.filter((_, i) => i !== index));
+      setDetailImagePreviews(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  const addVideoUrl = () => {
+    if (newVideoUrl.trim()) {
+      setVideoUrls(prev => [...prev, newVideoUrl.trim()]);
+      setNewVideoUrl('');
+    }
+  };
+
+  const removeVideoUrl = (index: number) => {
+    setVideoUrls(prev => prev.filter((_, i) => i !== index));
   };
 
   if (isChecking || loading) {
@@ -309,6 +369,93 @@ export default function FeaturedSetsManagementPage() {
                   <div className="mt-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover rounded-lg" />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  상세 이미지 (여러장 가능)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleDetailImagesChange}
+                  className="input"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  세트 상세 페이지에 표시되는 추가 이미지입니다.
+                </p>
+                {(existingDetailImages.length > 0 || detailImagePreviews.length > 0) && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {existingDetailImages.map((url, index) => (
+                      <div key={`existing-${index}`} className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`Detail ${index + 1}`} className="w-24 h-24 object-cover rounded-lg" />
+                        <button
+                          type="button"
+                          onClick={() => removeDetailImage(index, true)}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    {detailImagePreviews.map((url, index) => (
+                      <div key={`new-${index}`} className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt={`New Detail ${index + 1}`} className="w-24 h-24 object-cover rounded-lg border-2 border-violet-400" />
+                        <button
+                          type="button"
+                          onClick={() => removeDetailImage(index, false)}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full text-xs hover:bg-red-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  영상 URL (YouTube, Vimeo 등)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={newVideoUrl}
+                    onChange={(e) => setNewVideoUrl(e.target.value)}
+                    className="input flex-1"
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                  <button
+                    type="button"
+                    onClick={addVideoUrl}
+                    className="btn btn-secondary"
+                  >
+                    추가
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  YouTube, Vimeo 등의 영상 URL을 입력하세요.
+                </p>
+                {videoUrls.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {videoUrls.map((url, index) => (
+                      <div key={index} className="flex items-center gap-2 bg-slate-50 p-2 rounded">
+                        <span className="flex-1 text-sm text-slate-700 truncate">{url}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeVideoUrl(index)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
