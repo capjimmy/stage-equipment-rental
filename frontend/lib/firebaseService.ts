@@ -266,10 +266,24 @@ interface FeaturedSet {
   id: string;
   title: string;
   description: string;
+  detailedDescription?: string;
   imageUrl: string;
   productIds: string[];
   order: number;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Inquiry {
+  id: string;
+  featuredSetId?: string;
+  featuredSetTitle?: string;
+  name: string;
+  phone: string;
+  email?: string;
+  message: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   createdAt: string;
   updatedAt: string;
 }
@@ -313,6 +327,49 @@ export const featuredSetApi = {
   delete: async (id: string): Promise<void> => {
     const setRef = doc(db, 'featuredSets', id);
     await deleteDoc(setRef);
+  },
+};
+
+// Inquiry API
+export const inquiryApi = {
+  create: async (data: {
+    featuredSetId?: string;
+    featuredSetTitle?: string;
+    name: string;
+    phone: string;
+    email?: string;
+    message: string;
+  }): Promise<Inquiry> => {
+    const inquiriesRef = collection(db, 'inquiries');
+    const docRef = await addDoc(inquiriesRef, {
+      ...data,
+      status: 'pending',
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now(),
+    });
+    const newDoc = await getDoc(docRef);
+    return convertDoc<Inquiry>(newDoc);
+  },
+
+  getAll: async (): Promise<Inquiry[]> => {
+    const inquiriesRef = collection(db, 'inquiries');
+    const q = query(inquiriesRef, orderBy('createdAt', 'desc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(d => convertDoc<Inquiry>(d));
+  },
+
+  updateStatus: async (id: string, status: Inquiry['status']): Promise<Inquiry> => {
+    const docRef = doc(db, 'inquiries', id);
+    await updateDoc(docRef, {
+      status,
+      updatedAt: Timestamp.now(),
+    });
+    const updatedDoc = await getDoc(docRef);
+    return convertDoc<Inquiry>(updatedDoc);
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await deleteDoc(doc(db, 'inquiries', id));
   },
 };
 

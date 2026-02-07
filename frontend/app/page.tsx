@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation';
 import { Sparkles, User, ShoppingCart, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import NotificationBell from '@/components/NotificationBell';
-import { useProducts } from '@/hooks/useProducts';
 import { useCategories } from '@/hooks/useCategories';
+import { useActiveFeaturedSets } from '@/hooks/useFeaturedSets';
 import { User as UserType } from '@/types';
 import HeroSection from '@/components/home/HeroSection';
 import CategoriesSection from '@/components/home/CategoriesSection';
-import ProductGrid from '@/components/home/ProductGrid';
+import FeaturedSetsGrid from '@/components/home/FeaturedSetsGrid';
 
 export default function Home() {
   const router = useRouter();
@@ -20,10 +20,8 @@ export default function Home() {
   const [user, setUser] = useState<UserType | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const { data: allProducts = [] } = useProducts();
+  const { data: featuredSets = [] } = useActiveFeaturedSets();
   const { data: categories = [] } = useCategories();
-
-  const products = allProducts.slice(0, 6);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -142,7 +140,7 @@ export default function Home() {
       <CategoriesSection categories={categories} />
 
       {/* Featured Sets */}
-      <ProductGrid products={products} />
+      <FeaturedSetsGrid sets={featuredSets} />
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white py-8 md:py-12 mt-12 md:mt-20">

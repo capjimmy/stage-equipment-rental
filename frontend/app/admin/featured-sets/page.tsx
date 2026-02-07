@@ -13,6 +13,7 @@ interface FeaturedSet {
   id: string;
   title: string;
   description: string;
+  detailedDescription: string;
   imageUrl: string;
   productIds: string[];
   order: number;
@@ -35,6 +36,7 @@ export default function FeaturedSetsManagementPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    detailedDescription: '',
     imageUrl: '',
     order: 0,
     isActive: true,
@@ -94,6 +96,7 @@ export default function FeaturedSetsManagementPage() {
       const setData = {
         title: formData.title,
         description: formData.description,
+        detailedDescription: formData.detailedDescription,
         imageUrl: imageUrl || '/images/placeholder.svg',
         productIds: selectedProducts,
         order: formData.order,
@@ -121,6 +124,7 @@ export default function FeaturedSetsManagementPage() {
     setFormData({
       title: set.title,
       description: set.description,
+      detailedDescription: set.detailedDescription || '',
       imageUrl: set.imageUrl,
       order: set.order,
       isActive: set.isActive,
@@ -185,6 +189,7 @@ export default function FeaturedSetsManagementPage() {
     setFormData({
       title: '',
       description: '',
+      detailedDescription: '',
       imageUrl: '',
       order: featuredSets.length,
       isActive: true,
@@ -263,15 +268,31 @@ export default function FeaturedSetsManagementPage() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  설명
+                  간단 설명
                 </label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   className="input"
-                  rows={3}
-                  placeholder="세트에 대한 설명을 입력하세요"
+                  rows={2}
+                  placeholder="세트에 대한 간단한 설명 (홈페이지 미리보기용)"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  상세 설명
+                </label>
+                <textarea
+                  value={formData.detailedDescription}
+                  onChange={(e) => setFormData({ ...formData, detailedDescription: e.target.value })}
+                  className="input"
+                  rows={8}
+                  placeholder="세트에 대한 상세 설명을 입력하세요 (상세 페이지에 표시됩니다)"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  세트 상세 페이지에 표시되는 상세 설명입니다. 구성품, 특징, 사용 예시 등을 자세히 작성해주세요.
+                </p>
               </div>
 
               <div>

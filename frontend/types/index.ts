@@ -266,6 +266,34 @@ export interface RegisterData {
   phone?: string;
 }
 
+// Featured Set Types
+export interface FeaturedSet {
+  id: string;
+  title: string;
+  description: string;
+  detailedDescription?: string;
+  imageUrl: string;
+  productIds: string[];
+  order: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Inquiry Types
+export interface Inquiry {
+  id: string;
+  featuredSetId?: string;
+  featuredSetTitle?: string;
+  name: string;
+  phone: string;
+  email?: string;
+  message: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Admin Types
 export interface DashboardStats {
   totalProducts: number;

@@ -10,6 +10,7 @@ export {
   orderApi,
   adminApi,
   featuredSetApi,
+  inquiryApi,
   uploadImage,
   deleteImage,
 } from './firebaseService';
