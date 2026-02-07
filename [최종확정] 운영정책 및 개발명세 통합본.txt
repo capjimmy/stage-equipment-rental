@@ -1,0 +1,569 @@
+[문서명] 운영정책 및 개발명세 통합본 (최종 확정)
+[작성일] 2025-12-28
+[목적] 개발 착수 가능한 수준의 완전한 명세 제공 + 방향성 유지용 참조 문서
+
+========================================================
+0) 서비스 정체성 (한 문장 정의)
+========================================================
+본 서비스는 공연/무대용품(의상/소품/무대장치/장비 등)을 "실물 단위(Asset) + 대여 일정(Calendar)"로 관리하고,
+사용자가 "날짜를 먼저 선택한 뒤" 연출 의도(키워드/해시태그)로 탐색하여 장바구니에 담고
+계좌이체 기반 승인형 결제/출고/반납/정산까지 이어지는 멀티 벤더(공급자 다수) 렌탈 이커머스 플랫폼이다.
+
+========================================================
+1) 핵심 UX 원칙 (반드시 지켜야 하는 규칙)
+========================================================
+1-1. 날짜 선선택(Date-First Search)
+- 사용자는 검색 전에 반드시 대여 기간(start_date, end_date)을 선택한다.
+- 검색 결과, 상품 상세, 장바구니 담기 가능 여부는 모두 "선택된 날짜"를 기준으로 판단한다.
+
+1-2. 검색 기본 노출 정책
+- 기본: "현재 선택한 대여 기간에 대여 가능한 상품만" 결과에 노출
+- 옵션 체크박스: "대여 불가능한 상품도 표시"
+  - ON 시: 불가능 상품도 함께 노출하되, [대여 불가] 배지 + 사유 표시 + 담기 비활성화
+
+1-3. 장바구니는 '연출 세트'이며 날짜를 공유한다
+- 장바구니에 첫 아이템을 담는 순간, 장바구니의 대여 기간이 고정된다.
+- MVP에서는 '기간 통일'만 허용
+
+========================================================
+2) 사용자 역할 및 권한 (RBAC)
+========================================================
+- Visitor(비로그인): 검색/목록/상세 열람 가능, 장바구니/결제는 로그인 필요
+- Customer(소비자): 장바구니/결제/주문/렌탈 상태 조회, 취소/문의
+- Supplier(공급자): 본인 상품/자산(실물)/일정/정산 조회 및 관리
+- Admin(플랫폼 관리자): 전체 데이터/공급자 승인/태그 승인/분쟁/패널티/정산 확정/정책 관리
+
+========================================================
+3) 핵심 데이터 모델 (엔티티 설계)
+========================================================
+
+3-1. User(사용자)
+- user_id (UUID)
+- email, password_hash
+- role (customer/supplier/admin)
+- name, phone, address
+- status (active/suspended/deleted)
+- created_at, updated_at
+
+3-2. Category(카테고리)
+- category_id (UUID)
+- name, slug
+- parent_id (FK, nullable - 계층구조)
+- level (1/2/3 - 대/중/소)
+- created_at, updated_at
+
+3-3. Product(상품: 관리 단위)
+- product_id (UUID)
+- supplier_id (FK)
+- title, description, images[]
+- category_id (FK)
+- base_daily_price (기본 1일 렌탈가)
+- status (active/inactive)
+- created_at, updated_at
+
+3-4. Asset(실물: 렌탈의 실제 단위)
+- asset_id (UUID)
+- product_id (FK)
+- asset_code (예: A-001)
+- condition_grade (A/B/C)
+- status (available/rented/maintenance/inactive/lost)
+- notes, photos(optional)
+- created_at, updated_at
+
+3-5. Tag(해시태그: 의미 기반 검색)
+- tag_id (UUID)
+- name (예: "프랑스", "혁명", "프랑스혁명")
+- type(optional: country/era/mood/prop/genre)
+- synonyms(optional: 동의어 관리)
+- status (approved/pending/blocked)
+- created_by (admin/supplier)
+- created_at, updated_at
+
+3-6. ProductTag (M:N)
+- product_id, tag_id
+
+3-7. Rental(렌탈 일정/예약)
+- rental_id (UUID)
+- order_id (FK)
+- asset_id (FK)
+- start_date, end_date
+- buffer_days (기본 1일 고정)
+- blocked_start (= start_date)
+- blocked_end (= end_date + buffer_days)
+- status (requested/hold_pendingpay/confirmed/rented/returned/inspected/completed/canceled/rejected/expired)
+- cancel_reason(optional)
+- created_at, updated_at
+
+※ 충돌 규칙:
+- 같은 asset_id에 대해 [blocked_start, blocked_end] 구간이 겹치면 신규 예약 불가
+- buffer_days=1: 반납일과 다음 대여 시작일 사이 최소 1일 유예 (검수/세탁 시간)
+
+3-8. Cart(장바구니)
+- cart_id (UUID)
+- user_id
+- start_date, end_date (장바구니 기간)
+- created_at, updated_at
+
+3-9. CartItem
+- cart_item_id
+- cart_id
+- product_id
+- quantity (필요 수량)
+- assigned_asset_ids(optional; 1차 승인 시 확정)
+- price_snapshot
+
+3-10. Order(주문/결제)
+- order_id (UUID)
+- user_id
+- start_date, end_date
+- total_amount (렌탈료 + 배송비)
+- payment_method ('bank_transfer')
+- payment_status (pending/confirmed/failed/expired)
+- deposit_deadline_at (입금 기한: 승인 후 24시간 고정)
+- admin_approved_at_1 (1차 승인 시각)
+- admin_approved_at_2 (2차 승인: 입금 확인 시각)
+- fulfillment_status (requested/hold_pendingpay/confirmed/preparing/dispatched/delivered/returned/inspecting/inspection_passed/inspection_failed)
+- delivery_method ('quick' | 'parcel' | 'bundle')
+- shipping_cost (묶음배송=100,000원 고정, 나머지는 운영자 견적)
+- shipping_address, return_address
+- delivery_notes
+- canceled_at, canceled_by
+- cancellation_reason
+- refund_rate, refund_amount, cancellation_fee
+- refund_processed_at
+- created_at, updated_at
+
+3-11. Payment(입금 관리)
+- payment_id
+- order_id (FK)
+- method ('bank_transfer')
+- status ('pending' | 'confirmed' | 'failed' | 'expired')
+- depositor_name
+- deposit_amount
+- deposit_deadline_at
+- confirmed_at
+- admin_confirmed_by (user_id)
+
+3-12. Settlement(정산)
+- settlement_id
+- supplier_id
+- order_id
+- rental_id (optional)
+- type ('rental' | 'issue')
+  - rental: 기본 렌탈료 정산 (50:50)
+  - issue: 파손/연체 추가 청구 (공급자 100%, 플랫폼 수수료 없음)
+- gross_amount
+- platform_fee_amount (type=rental일 때만 50%)
+- supplier_amount
+- status (pending/confirmed/paid)
+- settlement_date
+- created_at, updated_at
+
+정산 생성 규칙:
+- type='rental': fulfillment_status = INSPECTION_PASSED 시점에 생성
+- type='issue': RentalIssue 해결(RESOLVED) 시점에 생성
+
+3-13. RentalIssue(렌탈 이슈)
+- issue_id
+- rental_id (FK)
+- type (damage/delay/loss)
+- severity (minor/major/total_loss)
+- impact_next_booking (boolean: 뒷타임 영향 여부)
+- impact_notes, impact_cost
+- reported_by, reported_at
+- evidence_photos[]
+- additional_charge (추가 청구액)
+- status (detected/notified/negotiating/resolved/billed/paid)
+- resolution_notes
+- created_at, updated_at
+
+3-14. Notification(알림)
+- notification_id
+- user_id (FK)
+- type (order_confirmed/shipped/returned/settlement_ready/order_rejected/order_expired 등)
+- title, message
+- link_url
+- is_read
+- created_at
+
+========================================================
+4) 결제 시스템: 계좌이체 승인형 (2단계 승인)
+========================================================
+
+4-1. 프로세스 흐름
+1) 고객: 예약 요청 생성 (REQUESTED)
+   - 배송 방식 선택 (quick/parcel/bundle)
+   - 배송 주소 입력
+
+2) 운영자: 1차 승인
+   - 배송비 확정 (bundle=100,000원 고정, 나머지는 견적 입력)
+   - Asset 자동 배정 (시스템)
+   - 상태 변경: REQUESTED → HOLD_PENDINGPAY
+   - Rental 레코드 생성 (asset_id 배정 + 블로킹)
+   - 입금 기한 자동 설정: 승인 시각 + 24시간
+   - 고객에게 계좌번호 + 총 입금액 안내 발송
+
+3) 고객: 입금
+
+4) 운영자: 2차 승인 (입금 확인)
+   - 입금자명, 입금액 확인
+   - 상태 변경: HOLD_PENDINGPAY → CONFIRMED
+   - 일정 확정
+
+5) 예외 처리:
+   - 운영자 거절: REQUESTED/HOLD_PENDINGPAY → REJECTED (블로킹 해제)
+   - 고객 취소: → CANCELED (환불 정책 적용)
+   - 입금 기한 초과: 배치 작업으로 자동 EXPIRED (블로킹 해제)
+
+4-2. 상태 머신
+
+[Order/Rental Status]
+- REQUESTED: 고객 예약 요청 생성 (대기)
+- HOLD_PENDINGPAY: 운영자 1차 승인 (입금대기, Asset 블로킹됨)
+- CONFIRMED: 입금 확인 완료 (일정 확정)
+- REJECTED: 운영자 거절 (블로킹 해제)
+- CANCELED: 고객 취소 (환불 정책 적용)
+- EXPIRED: 입금 기한 초과 자동 만료 (블로킹 해제)
+
+[Fulfillment Status]
+- PREPARING: 출고 준비 중
+- DISPATCHED: 배송 시작
+- DELIVERED: 고객 수령 완료
+- RETURNED: 고객 반납 완료 (검수 전)
+- INSPECTING: 검수 중
+- INSPECTION_PASSED: 검수 합격 → COMPLETED
+- INSPECTION_FAILED: 검수 불합격 → RentalIssue 생성
+
+4-3. 상태 전환 권한
+
+| 현재 상태           | 전환 가능 상태         | 권한        | 조건/UI                          |
+|---------------------|------------------------|-------------|----------------------------------|
+| REQUESTED           | HOLD_PENDINGPAY        | Admin       | [1차 승인] 버튼                  |
+| REQUESTED           | REJECTED               | Admin       | [거절] 버튼 + 사유 입력          |
+| REQUESTED           | CANCELED               | Customer    | [예약 취소] 버튼                 |
+| HOLD_PENDINGPAY     | CONFIRMED              | Admin       | [2차 승인(입금확인)] 버튼        |
+| HOLD_PENDINGPAY     | REJECTED               | Admin       | [거절] 버튼                      |
+| HOLD_PENDINGPAY     | CANCELED               | Customer    | [취소] 버튼 (100% 환불)          |
+| HOLD_PENDINGPAY     | EXPIRED                | System      | 배치(입금기한 초과 시 자동)      |
+| CONFIRMED           | CANCELED               | Customer    | [취소] 버튼 (환불 정책 적용)     |
+| CONFIRMED           | PREPARING              | Admin       | [출고 준비] 버튼                 |
+| PREPARING           | CANCELED               | Customer    | [취소] 버튼 (환불 정책 적용)     |
+| PREPARING           | DISPATCHED             | Admin       | [배송 시작] 버튼                 |
+| DISPATCHED          | (취소 불가)            | -           | -                                |
+
+========================================================
+5) 취소/환불 정책 (최종 확정)
+========================================================
+
+5-1. 기준점
+- "결제" = 고객 입금 완료 시점 (2차 승인/CONFIRMED)
+- "대여 시작일" = start_date
+
+5-2. 환불율 계산
+
+| 취소 시점                        | 환불율 | 위약금 |
+|----------------------------------|--------|--------|
+| 입금 완료 후 2시간 이내           | 100%   | 0%     |
+| 대여 시작일 21일 이전             | 100%   | 0%     |
+| 대여 시작일 14~20일 전            | 50%    | 50%    |
+| 대여 시작일 7~13일 전             | 20%    | 80%    |
+| 대여 시작일 0~6일 전              | 10%    | 90%    |
+| 출고 시작(DISPATCHED) 후          | 취소 불가 | -   |
+
+5-3. 우선순위
+- "입금 후 2시간 쿨링오프"가 최우선 적용
+- 예: 대여 5일 전에 입금했어도, 입금 후 2시간 내면 100% 환불
+
+5-4. 환불 계산 로직 (구현 필수)
+
+```javascript
+function calculateRefundRate(order) {
+  const now = new Date();
+  const confirmedAt = order.admin_approved_at_2; // 입금 확인 시각
+  const startDate = order.start_date;
+
+  // 1) 쿨링오프: 입금 후 2시간 이내
+  const hoursSincePayment = (now - confirmedAt) / (1000 * 60 * 60);
+  if (hoursSincePayment <= 2) {
+    return { refundRate: 100, reason: '쿨링오프 (입금 후 2시간 이내)' };
+  }
+
+  // 2) 대여 시작일까지 남은 일수
+  const daysUntilStart = Math.floor((startDate - now) / (1000 * 60 * 60 * 24));
+
+  if (daysUntilStart >= 21) {
+    return { refundRate: 100, reason: '대여 21일 이전 취소' };
+  } else if (daysUntilStart >= 14) {
+    return { refundRate: 50, reason: '대여 14~20일 전 취소' };
+  } else if (daysUntilStart >= 7) {
+    return { refundRate: 20, reason: '대여 7~13일 전 취소' };
+  } else if (daysUntilStart >= 0) {
+    return { refundRate: 10, reason: '대여 6일 이내 취소' };
+  } else {
+    return { refundRate: 0, reason: '대여 시작일 경과 (취소 불가)' };
+  }
+}
+
+// 실제 환불액 계산
+refundAmount = order.total_amount * (refundRate / 100);
+cancellationFee = order.total_amount - refundAmount;
+```
+
+========================================================
+6) 배송 정책
+========================================================
+
+6-1. 배송 방식 (고객이 예약 요청 시 선택)
+- quick (퀵): 운영자가 거리/시간에 따라 견적 입력
+- parcel (택배): 운영자가 무게/박스 수에 따라 견적 입력
+- bundle (묶음배송): 100,000원 고정 (다량 주문 시 업셀 유도)
+
+6-2. 배송 주체
+- 당분간 플랫폼(운영자)이 직접 처리
+
+6-3. 반납(회수) 방식
+- 동일하게 배송 방식 적용 (또는 order.delivery_method 재사용)
+
+========================================================
+7) 계약/약관 (필수 조항)
+========================================================
+
+7-1. 반환 및 검수
+- 이용자는 대여 종료일(end_date)까지 대여 물품을 지정 방식으로 반납해야 한다.
+- 플랫폼은 반납 후 검수(세탁/점검 포함)를 진행하며, 검수 기간은 기본 1일 이상 소요될 수 있다.
+
+7-2. 파손/분실/오염 책임
+- 이용자의 귀책으로 물품의 파손/분실/심각한 오염이 발생한 경우,
+  이용자는 수리비/복구비 또는 재구매 비용 상당액을 배상한다.
+
+7-3. 연체(반납 지연)
+- 이용자가 반납기한을 초과하여 반납한 경우, 초과 일수에 대해 추가 요금이 부과된다.
+
+7-4. 다음 예약(뒷타임) 영향 배상 (핵심)
+- 이용자의 파손/분실/연체 등 귀책 사유로 인해 해당 물품의 다음 예약(뒷타임) 진행이 불가능해지는 경우,
+  이용자는 다음 예약에 발생한 손해를 배상할 책임이 있다.
+- 손해 산정: (1) 다음 예약의 대여료 상당액, (2) 대체 조달 및 긴급 운송 비용, (3) 기타 실비
+
+7-5. 분쟁 처리
+- 파손/분실 여부 및 손해액에 관하여 다툼이 있을 경우,
+  플랫폼이 보유한 검수 기록(사진/영상/메모) 및 배송 기록을 우선 증거로 활용한다.
+
+========================================================
+8) 검색(Discovery) 상세 요구사항
+========================================================
+
+8-1. 입력/필터
+- 필수 입력: start_date, end_date
+- 검색어(q): 예 "프랑스 혁명"
+- 필터: category, supplier, condition_grade, price range, sort
+- 체크박스: include_unavailable (대여 불가 포함 표시)
+
+8-2. 검색 매칭 로직
+- q를 토큰화하여 Tag name, synonyms, Product title/description에 매칭
+- 결과는 product 단위로 반환하되:
+  - available_count (선택 기간에 가능한 asset 수)
+  - unavailable_reason (include_unavailable=true일 때)
+
+8-3. 노출 정책
+- include_unavailable=false: available_count>0 인 product만 반환
+- include_unavailable=true: 전부 반환하되 불가 시 배지 + 사유 표시
+
+8-4. 재고 수량 계산 쿼리 예시
+
+```sql
+SELECT COUNT(asset_id) as available_count
+FROM Asset
+WHERE product_id = ?
+AND status = 'available'
+AND asset_id NOT IN (
+  SELECT asset_id FROM Rental
+  WHERE status IN ('hold_pendingpay', 'confirmed', 'rented')
+  AND NOT (blocked_end < ? OR blocked_start > ?)
+  -- ?는 검색 start_date, end_date
+)
+```
+
+========================================================
+9) 기술 스택 (권장)
+========================================================
+
+9-1. Frontend
+- Next.js (React), TypeScript
+- Tailwind CSS
+- 상태관리: React Query + Zustand
+
+9-2. Backend
+- Node.js + NestJS, TypeScript
+- PostgreSQL (일정/정산 관리에 강함)
+- Redis (HOLD/임시 잠금, 캐시)
+- S3 (이미지 저장)
+
+9-3. Deploy
+- Frontend: Vercel
+- Backend: AWS (ECS/EC2/Lambda)
+
+9-4. Auth
+- JWT + RBAC
+
+9-5. Search (2차 확장)
+- 초기: PostgreSQL FTS (Full-Text Search)
+- 성장 시: Elasticsearch/Meilisearch
+
+========================================================
+10) 필수 DB 인덱스 전략
+========================================================
+
+- Asset: (product_id, status)
+- Rental: (asset_id, status, blocked_start, blocked_end)
+- Rental: (order_id) - 조회 성능
+- ProductTag: (product_id, tag_id)
+- Tag: GIN 인덱스 on (name) - 전문 검색
+- Order: (user_id, payment_status)
+- Order: (created_at) - 시계열 조회
+
+========================================================
+11) 표준 API 응답 형식
+========================================================
+
+```json
+{
+  "success": true,
+  "data": {...} | [...],
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human readable message"
+  },
+  "meta": {
+    "page": 1,
+    "limit": 20,
+    "total": 100
+  }
+}
+```
+
+주요 에러 코드:
+- DATE_REQUIRED: 날짜 미선택
+- ASSET_UNAVAILABLE: 해당 기간 불가
+- CART_DATE_MISMATCH: 장바구니 기간 불일치
+- INSUFFICIENT_STOCK: 재고 부족
+- PAYMENT_DEADLINE_EXPIRED: 입금 기한 초과
+- CANCELLATION_NOT_ALLOWED: 취소 불가 상태
+
+========================================================
+12) MVP 범위 (1차 출시 필수 기능)
+========================================================
+
+12-1. 반드시 포함
+- 날짜 선선택 검색, 대여 가능 우선 노출 + 불가 포함 체크박스
+- 카테고리 + 태그(해시태그) 기반 검색/필터
+- 장바구니(기간 고정) + 계좌이체 승인형 결제
+- Asset 자동 배정 (1차 승인 시)
+- 공급자 상품/자산 등록
+- 관리자 태그 승인 + 공급자 승인
+- 주문 관리 (1차/2차 승인 UI)
+- 취소/환불 처리
+- 정산(50:50) 기본 산출
+- RentalIssue 최소 기록 (파손/연체/뒷타임영향)
+- 기본 알림 (주문 확정, 거절, 만료)
+
+12-2. MVP에서 유예 (2차 확장)
+- 보증금 시스템
+- 파손/연체 자동 계산
+- 추천 엔진(자주 함께 대여됨)
+- 분리 주문(기간 다르게 담기)
+- 고급 검색 엔진(Elasticsearch)
+- 모바일 앱
+- 리뷰/평점 시스템
+
+========================================================
+13) 배치 작업 (Cron Jobs)
+========================================================
+
+13-1. 입금 기한 만료 처리 (필수)
+- 주기: 5분마다
+- 대상: HOLD_PENDINGPAY 상태 + deposit_deadline_at < now
+- 처리:
+  1) Order.payment_status = 'expired'
+  2) Order.fulfillment_status = 'expired'
+  3) 관련 Rental 레코드 삭제 또는 status='expired' (블로킹 해제)
+  4) 고객에게 만료 알림 발송
+
+13-2. 반납 기한 알림 (선택)
+- 주기: 1일 1회 (오전 9시)
+- 대상: end_date = today + 1 인 주문
+- 처리: 반납 안내 알림 발송
+
+13-3. 정산 자동 생성 (필수)
+- 주기: 1일 1회
+- 대상: fulfillment_status = 'inspection_passed' + Settlement 미생성
+- 처리: Settlement 레코드 생성 (type='rental', 50:50 분배)
+
+========================================================
+14) 주요 API 엔드포인트 (개념)
+========================================================
+
+[검색/상품]
+- GET /search?start_date&end_date&q&filters&include_unavailable
+- GET /products/:id?start_date&end_date
+- GET /products/:id/available-dates
+
+[장바구니]
+- POST /cart (기간 설정)
+- POST /cart/items (담기; 기간 일치 검사)
+- GET /cart
+- DELETE /cart/items/:id
+
+[주문/결제]
+- POST /orders (예약 요청 생성)
+- GET /orders
+- GET /orders/:id
+- POST /orders/:id/cancel (고객 취소)
+
+[관리자 - 주문 승인]
+- POST /admin/orders/:id/approve-first (1차 승인)
+- POST /admin/orders/:id/approve-second (2차 승인: 입금 확인)
+- POST /admin/orders/:id/reject (거절)
+
+[공급자]
+- CRUD /supplier/products
+- CRUD /supplier/assets
+- GET /supplier/calendar
+- GET /supplier/settlements
+
+[관리자]
+- POST /admin/tags/:id/approve
+- CRUD /admin/categories
+- CRUD /admin/suppliers
+- GET /admin/rentals
+- POST /admin/rental-issues
+
+========================================================
+15) 비기능 요구사항
+========================================================
+
+- 일정 충돌(더블부킹) 0%: 트랜잭션 + 락 필수
+- 결제/예약 확정의 원자성 보장
+- 로그/감사: 상태 변경 기록 (누가/언제/무엇을)
+- 성능: 검색 응답 1초 내 (초기)
+- 보안: RBAC, 공급자 데이터 분리
+
+========================================================
+[최종 확인 체크리스트]
+========================================================
+✅ 날짜 없으면 담기/결제 못함
+✅ 검색 기본값: 대여 가능만
+✅ 체크박스 ON 시: 불가도 노출 + 사유 명확
+✅ 장바구니 기간 고정 원칙
+✅ 실물(Asset) 단위로 충돌 검증
+✅ buffer_days=1 (반납일+1일 후 다음 대여 가능)
+✅ 1차 승인 시 Asset 즉시 배정
+✅ 입금 기한 24시간 고정
+✅ 입금 기한 만료 시 자동 EXPIRED 처리
+✅ 배송 방식 고객 선택 (묶음배송 10만원 고정)
+✅ 취소/환불 정책 (쿨링오프 2시간 + 단계별 위약금)
+✅ 파손 추가 청구는 공급자 100%
+✅ 태그 승인/동의어 관리 구조
+✅ 공급자/관리자 권한 분리
+✅ MVP는 보증금 제외
+
+[끝]

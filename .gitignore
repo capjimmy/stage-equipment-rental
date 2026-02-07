@@ -55,3 +55,5 @@ c?Usersparkmstage-equipment-rentalbackenduploads/
 
 # Claude config (optional - can include if needed)
 .claude/
+
+.vercel

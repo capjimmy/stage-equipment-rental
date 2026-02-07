@@ -142,7 +142,18 @@ export default function AssetsManagement({
         <button
           type="button"
           onClick={() => {
-            resetForm();
+            // 자산 코드 자동 생성: 상품ID 앞 6자리 + @ + 다음 번호
+            const prefix = productId.substring(0, 6).toUpperCase();
+            const nextNumber = assets.length + 1;
+            const autoCode = `${prefix}@${String(nextNumber).padStart(2, '0')}`;
+            setFormData({
+              assetCode: autoCode,
+              serialNumber: '',
+              conditionGrade: 'A',
+              notes: '',
+              images: [],
+            });
+            setEditingAsset(null);
             setShowForm(!showForm);
           }}
           className="btn btn-secondary btn-sm w-full sm:w-auto text-sm sm:text-base"

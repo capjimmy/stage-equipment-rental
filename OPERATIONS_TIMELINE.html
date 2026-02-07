@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StageBox 운영 타임테이블 - 칸반 보드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #a0aec0;
+            font-size: 1.1rem;
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+        }
+
+        .phase-indicator {
+            display: flex;
+            gap: 15px;
+        }
+
+        .phase-dot {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .phase-dot.week1 { background: #4ade80; color: #000; }
+        .phase-dot.week2 { background: #60a5fa; color: #000; }
+        .phase-dot.week3 { background: #f472b6; color: #000; }
+        .phase-dot.week4 { background: #a78bfa; color: #000; }
+        .phase-dot.ongoing { background: #fbbf24; color: #000; }
+
+        /* 칸반 보드 */
+        .kanban-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .kanban-column {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            min-height: 500px;
+        }
+
+        .column-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .column-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .column-count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+        }
+
+        .todo-column .column-header { border-bottom-color: #6b7280; }
+        .progress-column .column-header { border-bottom-color: #3b82f6; }
+        .review-column .column-header { border-bottom-color: #f59e0b; }
+        .done-column .column-header { border-bottom-color: #10b981; }
+
+        .task-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+        }
+
+        .task-card:hover {
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .task-card.priority-high { border-left-color: #ef4444; }
+        .task-card.priority-medium { border-left-color: #f59e0b; }
+        .task-card.priority-low { border-left-color: #10b981; }
+
+        .task-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+
+        .task-desc {
+            color: #a0aec0;
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        .task-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .task-tag {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 15px;
+            background: rgba(99, 102, 241, 0.3);
+        }
+
+        .task-tag.content { background: rgba(236, 72, 153, 0.3); }
+        .task-tag.marketing { background: rgba(34, 197, 94, 0.3); }
+        .task-tag.operations { background: rgba(251, 191, 36, 0.3); }
+        .task-tag.partnership { background: rgba(99, 102, 241, 0.3); }
+
+        .task-due {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        /* 타임라인 섹션 */
+        .timeline-section {
+            margin-top: 50px;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #f1f5f9;
+        }
+
+        .gantt-chart {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            overflow-x: auto;
+        }
+
+        .gantt-header {
+            display: grid;
+            grid-template-columns: 200px repeat(8, 1fr);
+            gap: 2px;
+            margin-bottom: 20px;
+        }
+
+        .gantt-header-cell {
+            text-align: center;
+            padding: 10px;
+            background: rgba(99, 102, 241, 0.2);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .gantt-row {
+            display: grid;
+            grid-template-columns: 200px repeat(8, 1fr);
+            gap: 2px;
+            margin-bottom: 8px;
+        }
+
+        .gantt-task-name {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+        }
+
+        .gantt-cell {
+            height: 40px;
+            background: rgba(255, 255, 255, 0.02);
+            position: relative;
+        }
+
+        .gantt-bar {
+            position: absolute;
+            height: 28px;
+            top: 6px;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .gantt-bar.content { background: linear-gradient(135deg, #ec4899, #f472b6); }
+        .gantt-bar.marketing { background: linear-gradient(135deg, #22c55e, #4ade80); }
+        .gantt-bar.operations { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+        .gantt-bar.partnership { background: linear-gradient(135deg, #6366f1, #818cf8); }
+
+        /* 마케팅 전략 섹션 */
+        .marketing-section {
+            margin-top: 50px;
+        }
+
+        .strategy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .strategy-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .strategy-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .strategy-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+
+        .strategy-card.target1 .strategy-icon { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .strategy-card.target2 .strategy-icon { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .strategy-card.target3 .strategy-icon { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .strategy-card.target4 .strategy-icon { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+
+        .strategy-list {
+            list-style: none;
+        }
+
+        .strategy-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .strategy-list li:last-child {
+            border-bottom: none;
+        }
+
+        .check-icon {
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        /* 체크리스트 */
+        .checklist-section {
+            margin-top: 50px;
+        }
+
+        .checklist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .checklist-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        .checklist-card h4 {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            font-size: 0.9rem;
+        }
+
+        .checkbox {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #4ade80;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .checkbox.checked {
+            background: #4ade80;
+            color: #000;
+        }
+
+        /* KPI 섹션 */
+        .kpi-section {
+            margin-top: 50px;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .kpi-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+        }
+
+        .kpi-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .kpi-label {
+            color: #a0aec0;
+            margin-top: 5px;
+            font-size: 0.9rem;
+        }
+
+        .kpi-target {
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #4ade80;
+        }
+
+        footer {
+            margin-top: 60px;
+            text-align: center;
+            padding: 30px;
+            color: #6b7280;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        @media (max-width: 1200px) {
+            .kanban-board {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .kanban-board {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 1.8rem;
+            }
+
+            .phase-indicator {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>StageBox 운영 타임테이블</h1>
+            <p class="subtitle">공연무대용품 렌탈 플랫폼 런칭 후 운영 계획 | 2026년 2월 ~ 4월</p>
+        </header>
+
+        <!-- 기간 표시 -->
+        <div class="timeline-header">
+            <div>
+                <strong>목표:</strong> 8주 내 첫 10개 유료 주문 달성
+            </div>
+            <div class="phase-indicator">
+                <span class="phase-dot week1">1-2주차: 콘텐츠 준비</span>
+                <span class="phase-dot week2">3-4주차: 소프트 런칭</span>
+                <span class="phase-dot week3">5-6주차: 마케팅 강화</span>
+                <span class="phase-dot week4">7-8주차: 최적화</span>
+                <span class="phase-dot ongoing">지속: 운영/개선</span>
+            </div>
+        </div>
+
+        <!-- 칸반 보드 -->
+        <div class="kanban-board">
+            <!-- To Do -->
+            <div class="kanban-column todo-column">
+                <div class="column-header">
+                    <span class="column-title">📋 To Do</span>
+                    <span class="column-count">8</span>
+                </div>
+
+                <div class="task-card priority-high">
+                    <div class="task-title">실제 상품 촬영 및 업로드</div>
+                    <div class="task-desc">보유 의상 115벌 고화질 촬영, 상세페이지 작성</div>
+                    <div class="task-meta">
+                        <span class="task-tag content">콘텐츠</span>
+                        <span class="task-due">D-7</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-high">
+                    <div class="task-title">상품 카테고리 정리</div>
+                    <div class="task-desc">시대별/용도별/스타일별 태그 체계 정립</div>
+                    <div class="task-meta">
+                        <span class="task-tag content">콘텐츠</span>
+                        <span class="task-due">D-5</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-medium">
+                    <div class="task-title">가격 정책 최종 확정</div>
+                    <div class="task-desc">일별/주별/장기 할인율 설정</div>
+                    <div class="task-meta">
+                        <span class="task-tag operations">운영</span>
+                        <span class="task-due">D-3</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-medium">
+                    <div class="task-title">배송/반납 프로세스 문서화</div>
+                    <div class="task-desc">택배사 선정, 반납 절차, 파손 보상 정책</div>
+                    <div class="task-meta">
+                        <span class="task-tag operations">운영</span>
+                        <span class="task-due">D-5</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-low">
+                    <div class="task-title">SNS 계정 개설</div>
+                    <div class="task-desc">Instagram, 네이버 블로그 개설 및 브랜딩</div>
+                    <div class="task-meta">
+                        <span class="task-tag marketing">마케팅</span>
+                        <span class="task-due">D-10</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-medium">
+                    <div class="task-title">극단 DB 수집</div>
+                    <div class="task-desc">서울/수도권 극단 연락처 리스트업 (100개 목표)</div>
+                    <div class="task-meta">
+                        <span class="task-tag partnership">제휴</span>
+                        <span class="task-due">D-14</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-low">
+                    <div class="task-title">FAQ 페이지 작성</div>
+                    <div class="task-desc">예상 질문 20개 이상 정리</div>
+                    <div class="task-meta">
+                        <span class="task-tag content">콘텐츠</span>
+                        <span class="task-due">D-14</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-low">
+                    <div class="task-title">리뷰/후기 시스템 기획</div>
+                    <div class="task-desc">첫 고객 리뷰 인센티브 프로그램</div>
+                    <div class="task-meta">
+                        <span class="task-tag marketing">마케팅</span>
+                        <span class="task-due">D-21</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- In Progress -->
+            <div class="kanban-column progress-column">
+                <div class="column-header">
+                    <span class="column-title">🔄 In Progress</span>
+                    <span class="column-count">4</span>
+                </div>
+
+                <div class="task-card priority-high">
+                    <div class="task-title">웹사이트 최종 테스트</div>
+                    <div class="task-desc">전체 플로우 점검, 버그 수정 완료</div>
+                    <div class="task-meta">
+                        <span class="task-tag operations">운영</span>
+                        <span class="task-due">진행중</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-high">
+                    <div class="task-title">샘플 상품 5개 업로드</div>
+                    <div class="task-desc">대표 의상으로 테스트 주문 진행</div>
+                    <div class="task-meta">
+                        <span class="task-tag content">콘텐츠</span>
+                        <span class="task-due">진행중</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-medium">
+                    <div class="task-title">관리자 기능 테스트</div>
+                    <div class="task-desc">주문 승인, 재고 관리 워크플로우 검증</div>
+                    <div class="task-meta">
+                        <span class="task-tag operations">운영</span>
+                        <span class="task-due">진행중</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-medium">
+                    <div class="task-title">이용약관/개인정보처리방침</div>
+                    <div class="task-desc">법적 필수 문서 작성</div>
+                    <div class="task-meta">
+                        <span class="task-tag operations">운영</span>
+                        <span class="task-due">진행중</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review -->
+            <div class="kanban-column review-column">
+                <div class="column-header">
+                    <span class="column-title">👀 Review</span>
+                    <span class="column-count">2</span>
+                </div>
+
+                <div class="task-card priority-high">
+                    <div class="task-title">Vercel 배포 완료</div>
+                    <div class="task-desc">stage-equipment-rental.vercel.app 라이브</div>
+                    <div class="task-meta">
+                        <span class="task-tag operations">운영</span>
+                        <span class="task-due">검토중</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-medium">
+                    <div class="task-title">모바일 반응형 확인</div>
+                    <div class="task-desc">iOS/Android 브라우저 테스트</div>
+                    <div class="task-meta">
+                        <span class="task-tag operations">운영</span>
+                        <span class="task-due">검토중</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Done -->
+            <div class="kanban-column done-column">
+                <div class="column-header">
+                    <span class="column-title">✅ Done</span>
+                    <span class="column-count">5</span>
+                </div>
+
+                <div class="task-card priority-high">
+                    <div class="task-title">프론트엔드 개발 완료</div>
+                    <div class="task-desc">Next.js 16 + TypeScript + Tailwind</div>
+                    <div class="task-meta">
+                        <span class="task-tag operations">운영</span>
+                        <span class="task-due">완료</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-high">
+                    <div class="task-title">Firebase 연동 완료</div>
+                    <div class="task-desc">Firestore, Auth, Storage 설정</div>
+                    <div class="task-meta">
+                        <span class="task-tag operations">운영</span>
+                        <span class="task-due">완료</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-medium">
+                    <div class="task-title">관리자 대시보드 구현</div>
+                    <div class="task-desc">상품/주문/회원 관리 기능</div>
+                    <div class="task-meta">
+                        <span class="task-tag operations">운영</span>
+                        <span class="task-due">완료</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-medium">
+                    <div class="task-title">장바구니/결제 플로우</div>
+                    <div class="task-desc">수동 입금 확인 방식 구현</div>
+                    <div class="task-meta">
+                        <span class="task-tag operations">운영</span>
+                        <span class="task-due">완료</span>
+                    </div>
+                </div>
+
+                <div class="task-card priority-low">
+                    <div class="task-title">프로덕션 준비 완료</div>
+                    <div class="task-desc">디버그 로그 제거, 보안 수정</div>
+                    <div class="task-meta">
+                        <span class="task-tag operations">운영</span>
+                        <span class="task-due">완료</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 간트 차트 스타일 타임라인 -->
+        <div class="timeline-section">
+            <h2 class="section-title">📅 8주 런칭 로드맵</h2>
+
+            <div class="gantt-chart">
+                <div class="gantt-header">
+                    <div class="gantt-header-cell">작업</div>
+                    <div class="gantt-header-cell">1주</div>
+                    <div class="gantt-header-cell">2주</div>
+                    <div class="gantt-header-cell">3주</div>
+                    <div class="gantt-header-cell">4주</div>
+                    <div class="gantt-header-cell">5주</div>
+                    <div class="gantt-header-cell">6주</div>
+                    <div class="gantt-header-cell">7주</div>
+                    <div class="gantt-header-cell">8주</div>
+                </div>
+
+                <!-- 콘텐츠 작업 -->
+                <div class="gantt-row">
+                    <div class="gantt-task-name">📸 상품 촬영</div>
+                    <div class="gantt-cell"><div class="gantt-bar content" style="left: 0; width: calc(200% + 2px);">50벌</div></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"><div class="gantt-bar content" style="left: 0; width: calc(200% + 2px);">65벌</div></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                </div>
+
+                <div class="gantt-row">
+                    <div class="gantt-task-name">✏️ 상세페이지 작성</div>
+                    <div class="gantt-cell"><div class="gantt-bar content" style="left: 0; width: calc(300% + 4px);">일별 10개</div></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"><div class="gantt-bar content" style="left: 0; width: calc(100%);">보완</div></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                </div>
+
+                <!-- 마케팅 작업 -->
+                <div class="gantt-row">
+                    <div class="gantt-task-name">📱 SNS 채널 구축</div>
+                    <div class="gantt-cell"><div class="gantt-bar marketing" style="left: 0; width: calc(100%);">개설</div></div>
+                    <div class="gantt-cell"><div class="gantt-bar marketing" style="left: 0; width: calc(600% + 10px);">주 3회 포스팅</div></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                </div>
+
+                <div class="gantt-row">
+                    <div class="gantt-task-name">🎯 극단 DM 캠페인</div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"><div class="gantt-bar marketing" style="left: 0; width: calc(200% + 2px);">1차 50개</div></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"><div class="gantt-bar marketing" style="left: 0; width: calc(200% + 2px);">2차 50개</div></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                </div>
+
+                <div class="gantt-row">
+                    <div class="gantt-task-name">🎭 공연 커뮤니티 활동</div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"><div class="gantt-bar marketing" style="left: 0; width: calc(600% + 10px);">지속 활동</div></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                </div>
+
+                <!-- 운영 작업 -->
+                <div class="gantt-row">
+                    <div class="gantt-task-name">⚙️ 운영 프로세스 정립</div>
+                    <div class="gantt-cell"><div class="gantt-bar operations" style="left: 0; width: calc(200% + 2px);">문서화</div></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                </div>
+
+                <div class="gantt-row">
+                    <div class="gantt-task-name">📦 배송 테스트</div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"><div class="gantt-bar operations" style="left: 0; width: calc(100%);">테스트</div></div>
+                    <div class="gantt-cell"><div class="gantt-bar operations" style="left: 0; width: calc(100%);">개선</div></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                </div>
+
+                <!-- 제휴 작업 -->
+                <div class="gantt-row">
+                    <div class="gantt-task-name">🤝 극단 제휴 미팅</div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"><div class="gantt-bar partnership" style="left: 0; width: calc(400% + 6px);">월 2-3회</div></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                </div>
+
+                <div class="gantt-row">
+                    <div class="gantt-task-name">🎓 연극과 협력</div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"><div class="gantt-bar partnership" style="left: 0; width: calc(300% + 4px);">대학 연락</div></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                    <div class="gantt-cell"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 타겟별 마케팅 전략 -->
+        <div class="marketing-section">
+            <h2 class="section-title">🎯 타겟별 마케팅 전략</h2>
+
+            <div class="strategy-grid">
+                <div class="strategy-card target1">
+                    <h3><span class="strategy-icon">🎭</span> 아마추어 극단</h3>
+                    <ul class="strategy-list">
+                        <li><span class="check-icon">▸</span> 네이버 카페 "극단사랑", "연극인광장" 활동</li>
+                        <li><span class="check-icon">▸</span> 첫 대여 10% 할인 프로모션</li>
+                        <li><span class="check-icon">▸</span> 소규모 공연 패키지 (의상 5벌 세트)</li>
+                        <li><span class="check-icon">▸</span> 대학로 연극제 시즌 집중 마케팅 (3-5월)</li>
+                        <li><span class="check-icon">▸</span> 인스타그램 공연 후기 이벤트</li>
+                    </ul>
+                </div>
+
+                <div class="strategy-card target2">
+                    <h3><span class="strategy-icon">⭐</span> 프로 극단</h3>
+                    <ul class="strategy-list">
+                        <li><span class="check-icon">▸</span> 직접 영업 (전화/이메일/방문)</li>
+                        <li><span class="check-icon">▸</span> 장기 계약 할인 (월간/시즌 패키지)</li>
+                        <li><span class="check-icon">▸</span> 맞춤 의상 컨설팅 서비스</li>
+                        <li><span class="check-icon">▸</span> VIP 등급제 도입 (누적 대여액 기준)</li>
+                        <li><span class="check-icon">▸</span> 세금계산서 발행 지원</li>
+                    </ul>
+                </div>
+
+                <div class="strategy-card target3">
+                    <h3><span class="strategy-icon">🎓</span> 대학 연극 동아리</h3>
+                    <ul class="strategy-list">
+                        <li><span class="check-icon">▸</span> 학생 할인 20% (학생증 인증)</li>
+                        <li><span class="check-icon">▸</span> 축제 시즌 번들 패키지</li>
+                        <li><span class="check-icon">▸</span> 연극과 교수 네트워킹</li>
+                        <li><span class="check-icon">▸</span> 대학 게시판/에브리타임 홍보</li>
+                        <li><span class="check-icon">▸</span> 졸업 공연 스폰서십</li>
+                    </ul>
+                </div>
+
+                <div class="strategy-card target4">
+                    <h3><span class="strategy-icon">📺</span> 영상 제작사</h3>
+                    <ul class="strategy-list">
+                        <li><span class="check-icon">▸</span> 유튜브 크리에이터 제휴</li>
+                        <li><span class="check-icon">▸</span> 독립영화/단편영화 제작팀 타겟</li>
+                        <li><span class="check-icon">▸</span> 시대극 촬영용 의상 큐레이션</li>
+                        <li><span class="check-icon">▸</span> 촬영장 직배송 서비스</li>
+                        <li><span class="check-icon">▸</span> KOFIC 독립영화 네트워크 활용</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 런칭 체크리스트 -->
+        <div class="checklist-section">
+            <h2 class="section-title">✅ 런칭 전 체크리스트</h2>
+
+            <div class="checklist-grid">
+                <div class="checklist-card">
+                    <h4>🖥️ 웹사이트</h4>
+                    <div class="checklist-item"><span class="checkbox checked">✓</span> Vercel 배포 완료</div>
+                    <div class="checklist-item"><span class="checkbox checked">✓</span> Firebase 연동</div>
+                    <div class="checklist-item"><span class="checkbox checked">✓</span> 관리자 계정 생성</div>
+                    <div class="checklist-item"><span class="checkbox"></span> SSL 인증서 확인</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 도메인 연결 (선택)</div>
+                    <div class="checklist-item"><span class="checkbox"></span> Google Analytics 설치</div>
+                </div>
+
+                <div class="checklist-card">
+                    <h4>📦 상품</h4>
+                    <div class="checklist-item"><span class="checkbox"></span> 최소 30개 상품 업로드</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 카테고리 정리 완료</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 가격 책정 완료</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 상품 사진 고화질</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 상세 설명 작성</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 사이즈 정보 기재</div>
+                </div>
+
+                <div class="checklist-card">
+                    <h4>📋 운영</h4>
+                    <div class="checklist-item"><span class="checkbox"></span> 이용약관 작성</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 개인정보처리방침</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 환불 정책 명시</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 파손 보상 정책</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 배송 택배사 선정</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 입금 계좌 준비</div>
+                </div>
+
+                <div class="checklist-card">
+                    <h4>📣 마케팅</h4>
+                    <div class="checklist-item"><span class="checkbox"></span> Instagram 계정 개설</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 네이버 블로그 개설</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 네이버 플레이스 등록</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 오픈 이벤트 기획</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 첫 고객 후기 유도 전략</div>
+                    <div class="checklist-item"><span class="checkbox"></span> 극단 연락처 50개 수집</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI 목표 -->
+        <div class="kpi-section">
+            <h2 class="section-title">📊 8주 KPI 목표</h2>
+
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-value">115</div>
+                    <div class="kpi-label">상품 업로드</div>
+                    <div class="kpi-target">현재 보유 재고 전량</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-value">10</div>
+                    <div class="kpi-label">첫 유료 주문</div>
+                    <div class="kpi-target">8주 내 달성 목표</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-value">50</div>
+                    <div class="kpi-label">회원 가입</div>
+                    <div class="kpi-target">8주 내 신규 회원</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-value">1,000</div>
+                    <div class="kpi-label">월간 방문자</div>
+                    <div class="kpi-target">2개월 차 목표</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-value">100</div>
+                    <div class="kpi-label">극단 컨택</div>
+                    <div class="kpi-target">DM/이메일 발송</div>
+                </div>
+
+                <div class="kpi-card">
+                    <div class="kpi-value">5</div>
+                    <div class="kpi-label">제휴 극단</div>
+                    <div class="kpi-target">정기 고객 확보</div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>StageBox 운영 타임테이블 v1.0</p>
+            <p>생성일: 2026-02-07 | 목표 런칭: 2026-02-14</p>
+            <p style="margin-top: 10px; color: #9ca3af;">
+                "모든 무대의 시작, StageBox와 함께"
+            </p>
+        </footer>
+    </div>
+</body>
+</html>

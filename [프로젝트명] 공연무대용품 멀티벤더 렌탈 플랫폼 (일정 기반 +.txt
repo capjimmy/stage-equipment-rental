@@ -1,0 +1,374 @@
+[프로젝트명] 공연/무대용품 멀티벤더 렌탈 플랫폼 (일정 기반 + 해시태그 검색 + 50:50 정산)
+[문서 목적] Claude(개발)에게 그대로 전달하여 자체 개발 착수 가능한 수준의 상세 설계 명세서
+
+0) 한 문장 정의 (서비스 정체성)
+- 본 서비스는 공연/무대용품(의상/소품/무대장치/장비 등)을 “실물 단위(Asset) + 대여 일정(Calendar)”로 관리하고,
+  사용자가 “날짜를 먼저 선택한 뒤” 연출 의도(키워드/해시태그)로 탐색하여 장바구니에 담고 결제/출고/반납/정산까지 이어지는
+  멀티 벤더(공급자 다수) 렌탈 이커머스 플랫폼이다.
+- 검색 기본값은 ‘선택한 날짜에 대여 가능한 상품만 노출’이며, 체크박스 옵션으로 ‘대여 불가 상품도 표시’를 지원한다.
+- 공급자와 플랫폼은 기본적으로 50:50 수익분배(정산) 구조이며, 렌탈 완료(반납+검수 완료) 기준으로 정산이 생성/확정된다.
+
+1) 핵심 UX 원칙 (반드시 지켜야 하는 규칙)
+1-1. 날짜 선선택(Date-First Search)
+- 사용자는 검색 전에 반드시 대여 기간(start_date, end_date)을 선택한다.
+- 검색 결과, 상품 상세, 장바구니 담기 가능 여부는 모두 “선택된 날짜”를 기준으로 판단한다.
+- 날짜가 선택되지 않은 상태에서는 장바구니 담기/결제 기능을 막거나(권장) 강하게 유도한다.
+
+1-2. 검색 기본 노출 정책
+- 기본(디폴트): “현재 선택한 대여 기간에 대여 가능한 상품만” 결과에 노출.
+- 옵션 체크박스: “대여 일정 불가능한 상품도 표시”
+  - ON 시: 불가능 상품도 함께 노출하되,
+    (a) 카드 상단에 [대여 불가] 배지,
+    (b) 불가 사유(예: 해당 기간 이미 대여중/수리중/비활성 등) 표시,
+    (c) 장바구니 담기 버튼 비활성화,
+    (d) 가능한 가장 가까운 대여 가능 기간 안내(가능하면) 또는 ‘가능 날짜 보기’ 기능 제공.
+
+1-3. 장바구니는 ‘연출 세트’이며 날짜를 공유한다
+- 장바구니에 첫 아이템을 담는 순간, 장바구니의 대여 기간(start_date, end_date)이 고정된다.
+- 이후 검색/상세는 장바구니 기간 기준으로 자동 필터되도록 UX 설계(권장).
+- 다른 기간으로 담으려 할 경우:
+  - 경고 모달: “장바구니 기간과 다릅니다. 기간을 변경할까요? (기존 장바구니 초기화/분리 주문)”
+  - 초기 MVP에서는 ‘기간 통일’만 허용(권장). 향후 ‘분리 주문’ 기능 확장 가능.
+
+2) 사용자 역할 및 권한 (RBAC)
+- Visitor(비로그인): 검색/목록/상세 열람 가능(날짜 선택 가능), 장바구니/결제는 로그인 필요.
+- Customer(소비자): 장바구니/결제/주문/렌탈 상태 조회, 취소/문의.
+- Supplier(공급자): 본인 상품/자산(실물)/일정/정산 조회 및 일부 관리.
+- Admin(플랫폼 관리자): 전체 데이터/공급자 승인/태그 승인/분쟁/패널티/정산 확정/정책 관리.
+
+3) 데이터 모델(핵심 엔티티) - 개념 설계
+3-1. Product(상품: 관리 단위)
+- product_id (UUID)
+- supplier_id (FK)
+- title, description, images[]
+- category_id (FK; 1차 분류)
+- base_daily_price (기본 1일 렌탈가) 또는 price_policy(정책)
+- deposit_policy (보증금 정책: 초기 MVP는 optional)
+- status (active/inactive)
+- created_at, updated_at
+
+3-2. Asset(실물: 렌탈의 실제 단위)
+- asset_id (UUID)
+- product_id (FK)
+- asset_code (예: A-001 같은 표시용 코드; 내부 UUID와 별개)
+- condition_grade (A/B/C)
+- status (available/rented/maintenance/inactive/lost)
+- notes, photos(optional)
+- created_at, updated_at
+
+3-3. Tag(해시태그: 의미 기반 검색)
+- tag_id (UUID)
+- name (예: “프랑스”, “혁명”, “프랑스혁명”, “근대유럽”)
+- type(optional: country/era/mood/prop/genre 등)
+- synonyms(optional: 동의어 관리; 예 “불란서” -> “프랑스”)
+- status (approved/pending/blocked)
+- created_by (admin/supplier)
+- created_at, updated_at
+
+3-4. ProductTag (M:N)
+- product_id, tag_id
+
+3-5. RentalReservation / Rental(렌탈 일정/예약)
+- rental_id (UUID)
+- order_id (FK)
+- asset_id (FK)
+- start_date, end_date (날짜 단위; 시간단위는 차후 확장)
+- status (hold/reserved/rented/returned/inspected/completed/canceled)
+- cancel_reason(optional)
+- created_at, updated_at
+
+※ 충돌 규칙(필수):
+- 같은 asset_id에 대해 [start_date, end_date] 구간이 겹치면 신규 예약 불가.
+- 결제 직전/직후 경쟁 상태 방지를 위해 “HOLD(임시잠금)” 단계 필요.
+  - 결제 시작 시 HOLD 생성 + TTL(예: 10분) 후 자동 해제.
+  - 결제 성공 시 RESERVED 확정.
+  - 결제 실패/취소 시 HOLD 삭제.
+
+3-6. Cart(장바구니)
+- cart_id (UUID)
+- user_id
+- start_date, end_date (장바구니 기간)
+- items: cart_item[]
+- created_at, updated_at
+
+3-7. CartItem
+- cart_item_id
+- cart_id
+- product_id
+- quantity (상품 단위 수량이 아니라 “필요 수량”; 시스템이 실제 asset 배정)
+- assigned_asset_ids(optional; MVP에서는 자동배정 후 결제 시 확정)
+- price_snapshot
+
+3-8. Order(주문/결제)
+- order_id
+- user_id
+- start_date, end_date
+- total_amount
+- payment_status (pending/paid/failed/refunded)
+- fulfillment_status (preparing/shipped/delivered/returned)
+- created_at, updated_at
+
+3-9. Settlement(정산)
+- settlement_id
+- supplier_id
+- order_id
+- gross_amount
+- platform_fee_amount (기본 50%)
+- supplier_amount (기본 50%)
+- status (pending/confirmed/paid)
+- settlement_date
+- created_at, updated_at
+
+정산 생성 규칙:
+- 원칙: 렌탈이 “completed(반납+검수 완료)”가 되는 시점에 생성/확정.
+- MVP에서는 “returned(반납 완료)”만으로 확정할지, “inspected(검수 완료)”까지 갈지 정책 결정 필요.
+- 파손/연체/분실 정책은 초기 MVP에서는 안내/수동 처리로 시작하고, 2차에서 자동화 확장 권장.
+
+4) 검색(Discovery) 상세 요구사항
+4-1. 입력/필터
+- 필수 입력: start_date, end_date
+- 검색어(q): 예 “프랑스 혁명”
+- 필터:
+  - category (대분류/중분류)
+  - supplier (공급자)
+  - condition_grade (A/B/C)
+  - price range(optional)
+  - sort (인기순/신규/가격/대여가능수량 등)
+  - 체크박스: include_unavailable (대여 불가 포함 표시)
+
+4-2. 검색 매칭 로직(권장)
+- q를 토큰화하여 Tag name, synonyms, Product title/description에 매칭.
+- q가 “프랑스 혁명”이면:
+  - tag “프랑스”, “혁명”, “프랑스혁명” 등 연관 태그 확장 가능.
+- 결과는 product 단위로 반환하되, 각 product마다:
+  - available_count (선택 기간에 가능한 asset 수)
+  - unavailable_reason (include_unavailable=true일 때만) + next_available_dates(optional)
+
+4-3. 노출 정책
+- include_unavailable=false: available_count>0 인 product만 반환.
+- include_unavailable=true: 전부 반환하되 available_count=0 인 경우 불가 배지 + 사유 표시.
+
+5) 페이지별 상세 기능 명세
+
+5-1. 메인(Home)
+목적: 날짜 선택 + 검색 진입 중심.
+구성:
+- 상단: DateRangePicker(필수), 검색창(q), 검색 버튼
+- 추천 해시태그 영역(클릭 시 검색어/태그 필터 적용)
+- 카테고리 퀵 버튼(의상/소품/무대장치/장비)
+- “인기 연출 세트” 섹션(향후: 자주 함께 대여된 조합 추천)
+- 우측 고정 장바구니 버튼(전 페이지 공통 UI)
+  - 표시: 담긴 개수, 선택 기간
+동작:
+- 날짜 미선택 상태에서 검색 시: “날짜를 먼저 선택하세요” 안내 + 선택 UI 포커스.
+
+5-2. 검색 결과(Search Results)
+목적: 해당 기간에 가능한 연출 자산 탐색.
+구성:
+- 상단: 현재 선택된 기간 표시 + 변경 가능
+- 체크박스: “대여 불가능 상품도 표시” (include_unavailable)
+- 좌측/상단 필터: 카테고리/공급자/상태/정렬
+- 결과 리스트(카드):
+  - 썸네일, 상품명, 대표 태그 3~6개
+  - “해당 기간 대여 가능 수량: N”
+  - 가능 시: “빠른 담기” 버튼(장바구니로)
+  - 불가 시: [대여 불가] 배지 + 사유 + 버튼 비활성
+추가 UX:
+- 결과 0개면: 태그 추천/유사 키워드 제안.
+
+5-3. 상품 상세(Product Detail)
+목적: 연출 적합성 판단 + 일정 확인 + 담기.
+구성:
+- 이미지 갤러리, 설명(연출 관점), 스펙/구성품(있다면)
+- 태그 목록(클릭 시 해당 태그로 검색)
+- 기간 표시/변경(이미 선택된 기간 기반)
+- “가능 수량” 및 불가 사유
+- “이 상품과 함께 자주 대여됨” 추천(2차)
+버튼 정책:
+- 날짜 없으면 담기 비활성/유도
+- 해당 기간 가능 수량>0 이면 담기 가능
+- include_unavailable 옵션으로 상세 진입한 경우, 불가 상태는 동일하게 담기 비활성
+
+5-4. 장바구니(우측 패널 + 전용 페이지)
+목적: 연출 세트 확인/오류 방지/결제 진입.
+공통(우측 패널):
+- 담긴 상품 요약(최대 3개 + 더보기)
+- 장바구니 기간 표시
+- “장바구니 보기” 버튼
+전용 페이지:
+- 아이템 리스트(수량, 가격, 태그)
+- 기간 변경(정책에 따라 허용; 기본은 전체 기간 변경만)
+- 기간 불일치 방지 로직(기본적으로 발생하지 않게 설계)
+- 예상 합계, 보증금 안내(있을 경우)
+- 결제 버튼
+중요:
+- 결제 직전 HOLD 생성: “재고 확인중…” 상태 표시.
+
+5-5. 결제(Checkout)
+목적: 일정 확정 + 결제 + 약관 동의.
+구성:
+- 주문 요약(기간/아이템/금액)
+- 배송정보/반납 안내(정책)
+- 약관 동의(파손/연체/분실 등; MVP는 최소 문구라도 필수)
+- 결제 수단 선택
+결제 완료 후:
+- Order 생성 + Rental(Reserved) 확정 + 장바구니 비우기
+- 주문 상세로 이동
+
+5-6. 주문/렌탈 상세(Order & Rental Detail) - 소비자
+목적: 신뢰/상태 추적.
+표시:
+- 주문 상태(결제/출고/반납)
+- 대여 기간
+- 아이템 리스트
+- 문의/취소(정책)
+취소 정책(MVP):
+- 출고 전 취소 가능, 출고 후 취소 불가(또는 수동 처리)
+- 취소 시 예약 해제 및 환불 처리.
+
+5-7. 마이페이지(My)
+- 프로필/연락처
+- 렌탈 내역 리스트(예약중/대여중/반납대기/완료)
+- 영수증/결제내역 다운로드(선택)
+
+5-8. 공급자 대시보드(Supplier Dashboard)
+목적: 공급자가 “자기 물건 운영”만 빠르게.
+표시:
+- 이번 달 대여 건수/매출/정산예정
+- 오늘/이번주 출고 예정, 반납 예정
+- 알림(파손/연체/문의)
+링크:
+- 상품 관리, 자산 관리, 일정 캘린더, 정산 내역
+
+5-9. 공급자 상품 관리(Supplier Products)
+기능:
+- 상품 CRUD(등록/수정/비활성)
+- 카테고리 선택
+- 태그(해시태그) 입력/제안: 신규 태그는 pending으로 등록 후 관리자 승인
+- 가격 정책 설정(일 단가)
+- 이미지 업로드
+주의:
+- 공급자는 본인 상품만 접근.
+
+5-10. 공급자 자산(실물) 관리(Supplier Assets)
+기능:
+- asset_code 생성/관리(A-001 등)
+- 상태(available/maintenance/inactive) 변경
+- 상태 이력 기록(선택)
+- 사진/메모(검수용)
+주의:
+- 렌탈 중인 asset은 수동 비활성 제한(정책)
+
+5-11. 공급자 일정 캘린더(Supplier Calendar)
+기능:
+- 캘린더 뷰(자산별 일정)
+- 상태 표시(reserved/rented 등)
+- 출고/반납 체크는 운영정책에 따라 공급자 또는 관리자만 가능(초기에는 관리자 권장)
+
+5-12. 공급자 정산 내역(Supplier Settlements)
+기능:
+- 월별/건별 정산 리스트
+- 상태(pending/confirmed/paid)
+- 주문 상세 링크
+- 정산금액 breakdown(총액/플랫폼수수료/공급자 몫)
+
+5-13. 관리자 대시보드(Admin Dashboard)
+기능:
+- 전체 주문/렌탈 현황
+- 공급자별 매출
+- 대여 불가율(재고 부족)
+- CS/분쟁 현황
+
+5-14. 관리자 공급자 관리(Admin Suppliers)
+기능:
+- 공급자 승인/정지
+- 정산 비율(기본 50:50, 추후 공급자별 커스텀 가능)
+- 패널티 기록
+
+5-15. 관리자 태그/카테고리 관리(Admin Taxonomy)
+기능:
+- 카테고리 트리 관리(대/중/소)
+- 태그 승인(pending -> approved)
+- 동의어/대표 태그 매핑(예: 불란서 -> 프랑스)
+- 금칙어/블록 태그
+
+5-16. 관리자 렌탈/일정 전체 관리(Admin Rentals)
+기능:
+- 특정 기간의 전체 예약 조회
+- 자산별 충돌 검사/강제 취소(권한)
+- 출고/반납/검수 상태 변경(운영자 중심)
+
+5-17. 관리자 분쟁/패널티(Admin Disputes) (2차 확장 가능, MVP는 최소)
+- 파손/연체/분실 기록
+- 비용 정산 반영(차감/추가 결제)
+- 증빙 사진/메모
+
+6) 시스템/아키텍처 & 스택 제안
+6-1. 권장 기술 스택
+- Frontend: Next.js (React), TypeScript, Tailwind(또는 CSS-in-JS), 상태관리(React Query/Zustand)
+- Backend: Node.js + NestJS(또는 Express), TypeScript
+- DB: PostgreSQL (일정/정산에 강함)
+- Cache/Lock: Redis (HOLD/임시 잠금)
+- Storage: S3(이미지)
+- Deploy: Vercel(프론트) + AWS(ECS/EC2/Lambda 중 선택) 또는 단일 AWS
+- Auth: JWT/Session + RBAC
+- Search(2차): 초기에는 DB LIKE/FTS, 성장하면 Elasticsearch/Meilisearch/PG trigram 고려
+
+6-2. 아키텍처(개념)
+- Client(웹) -> API 서버 -> DB/Redis/S3
+- 결제 웹훅 수신 -> 주문 확정 -> 예약 확정(hold -> reserved)
+- 예약 충돌 방지 로직은 API 단에서 트랜잭션으로 처리(필수)
+
+7) 주요 API 요구사항(개념)
+- GET /search?start_date&end_date&q&filters&include_unavailable
+- GET /products/:id?start_date&end_date
+- POST /cart (기간 설정)
+- POST /cart/items (담기; 기간 일치 검사)
+- POST /checkout/hold (hold 생성)
+- POST /checkout/pay (결제 처리/웹훅)
+- GET /orders, GET /orders/:id
+- Supplier: CRUD /supplier/products, /supplier/assets, /supplier/calendar, /supplier/settlements
+- Admin: /admin/tags(approve), /admin/categories, /admin/suppliers, /admin/rentals
+
+8) MVP 범위(강력 권장) - “빨리 검증”용
+- 반드시 포함:
+  - 날짜 선선택 검색, 대여 가능 우선 노출 + 불가 포함 체크박스
+  - 카테고리 + 태그(해시태그) 기반 검색/필터
+  - 장바구니(기간 고정) + 결제 + 예약 확정
+  - 공급자 상품/자산 등록(최소 기능)
+  - 관리자 태그 승인 + 공급자 승인
+  - 정산(50:50) 기본 산출(수동 지급 가능)
+- MVP에서 유예(2차):
+  - 파손/연체 자동 계산
+  - 추천 엔진(자주 함께 대여됨)
+  - 분리 주문(기간 다르게 담기)
+  - 고급 검색 엔진(Elastic 등)
+  - 모바일 앱
+
+9) 비기능 요구사항(운영/신뢰/안전)
+- 일정 충돌(더블부킹) 0%가 목표: 트랜잭션+락 필수.
+- 결제/예약 확정의 원자성 보장(결제 성공인데 예약 실패가 없어야 함).
+- 로그/감사: 누가 언제 어떤 상태를 바꿨는지(관리자/공급자) 기록 권장.
+- 성능: 검색 응답 1초 내 목표(초기), 이미지 최적화.
+- 보안: 공급자 데이터 분리(RBAC), 관리자 액션 보호.
+
+10) UI/디자인 톤(트렌디함 요구)
+- 해시태그를 “검색의 중심 UI 요소”로 활용:
+  - 카드에 태그 칩(chip) 표시
+  - 검색창 하단 추천 태그/연관 태그
+- 우측 고정 장바구니(모든 페이지 공통):
+  - 현재 담긴 개수 + 기간 표시 + 원클릭 이동
+- 불가 상품 표시 시 혼란 최소화:
+  - 배지 + 사유 문구 + 담기 비활성 + 대체 제안(가능하면)
+
+[최종 확인 체크리스트]
+- 날짜 없으면 담기/결제 못함(또는 강력 유도)
+- 검색 기본값: 대여 가능만
+- 체크박스 ON 시: 불가도 노출 + 사유 명확
+- 장바구니 기간 고정 원칙
+- 실물(Asset) 단위로 충돌 검증
+- HOLD(임시 잠금) 단계 구현
+- 태그 승인/동의어 관리 구조 포함
+- 공급자/관리자 권한 분리
+
+이 문서를 기반으로 개발 착수하며, MVP 목표는 “날짜 기반 탐색 → 담기 → 결제 → 예약 확정 → 기본 정산 산출”까지 end-to-end 동작 확인이다.

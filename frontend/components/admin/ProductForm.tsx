@@ -1,6 +1,6 @@
 'use client';
 
-import { Save } from 'lucide-react';
+import { Save, X } from 'lucide-react';
 import { Category, Tag } from '@/types';
 import ImageUpload from '@/components/ImageUpload';
 
@@ -178,10 +178,14 @@ export default function ProductForm({
             {formData.tags.map(tagId => {
               const tag = allTags.find(t => t.id === tagId);
               return tag ? (
-                <span key={tagId} className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 bg-violet-200 text-violet-800 rounded-full text-xs sm:text-sm font-medium">
+                <span key={tagId} className="relative inline-flex items-center pl-2 sm:pl-3 pr-6 sm:pr-7 py-1 bg-violet-200 text-violet-800 rounded-full text-xs sm:text-sm font-medium">
                   #{tag.name}
-                  <button type="button" onClick={() => onRemoveTag(tagId)} className="hover:text-violet-900">
-                    <span className="text-xs">×</span>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveTag(tagId)}
+                    className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors shadow-sm"
+                  >
+                    <X className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                   </button>
                 </span>
               ) : null;
