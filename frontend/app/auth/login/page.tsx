@@ -132,14 +132,6 @@ export default function LoginPage() {
             </p>
           </div>
 
-          {/* 테스트 계정 정보 */}
-          <div className="mt-6 p-4 bg-slate-50 rounded-lg">
-            <p className="text-sm text-slate-600 mb-2 font-medium">테스트 계정:</p>
-            <div className="text-sm text-slate-500 space-y-1">
-              <p>이메일: customer@example.com</p>
-              <p>비밀번호: password123</p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

@@ -58,20 +58,6 @@ export default function LoginPage() {
     }
   };
 
-  const fillAdminCredentials = () => {
-    setFormData({
-      email: 'admin@example.com',
-      password: 'password123',
-    });
-  };
-
-  const fillCustomerCredentials = () => {
-    setFormData({
-      email: 'customer@example.com',
-      password: 'password123',
-    });
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-50 via-white to-pink-50 flex items-center justify-center p-6">
       <div className="w-full max-w-md">
@@ -155,24 +141,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-slate-200">
-            <p className="text-sm text-slate-600 text-center mb-3">테스트 계정으로 로그인</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={fillAdminCredentials}
-                className="px-4 py-2 text-sm border border-violet-300 rounded-lg hover:bg-violet-50 transition-colors"
-              >
-                관리자 계정
-              </button>
-              <button
-                onClick={fillCustomerCredentials}
-                className="px-4 py-2 text-sm border border-pink-300 rounded-lg hover:bg-pink-50 transition-colors"
-              >
-                고객 계정
-              </button>
-            </div>
-          </div>
-
           <div className="mt-6 text-center">
             <p className="text-sm text-slate-600">
               계정이 없으신가요?{' '}
@@ -183,14 +151,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Info box */}
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800">
-            <strong>테스트 계정 정보:</strong>
-            <br />• 관리자: admin@example.com / password123
-            <br />• 고객: customer@example.com / password123
-          </p>
-        </div>
       </div>
     </div>
   );

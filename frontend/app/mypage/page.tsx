@@ -45,12 +45,17 @@ export default function MyPage() {
     }
     const userData = localStorage.getItem('user');
     if (userData) {
-      const parsedUser = JSON.parse(userData);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- reading from localStorage on mount
-      setUser(parsedUser);
-      setIsAdmin(parsedUser.role === 'admin');
-      if (parsedUser.role === 'admin') {
-        fetchProducts();
+      try {
+        const parsedUser = JSON.parse(userData);
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- reading from localStorage on mount
+        setUser(parsedUser);
+        setIsAdmin(parsedUser.role === 'admin');
+        if (parsedUser.role === 'admin') {
+          fetchProducts();
+        }
+      } catch {
+        // Invalid user data, redirect to login
+        router.push('/login');
       }
     }
   }, [router, fetchProducts]);

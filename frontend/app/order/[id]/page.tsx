@@ -56,7 +56,6 @@ export default function OrderDetailPage() {
 
   useEffect(() => {
     const loadOrderDetail = async () => {
-      console.log('[OrderDetailPage] loadOrderDetail started, orderId:', orderId);
       try {
         const userStr = localStorage.getItem('user');
         let adminMode = false;
@@ -65,15 +64,10 @@ export default function OrderDetailPage() {
           const user = JSON.parse(userStr);
           adminMode = user.role === 'admin';
           setIsAdmin(adminMode);
-          console.log('[OrderDetailPage] User found, adminMode:', adminMode);
-        } else {
-          console.log('[OrderDetailPage] No user in localStorage');
         }
 
         // Use Firebase API to get order
-        console.log('[OrderDetailPage] Calling orderApi.getOrderById...');
         const orderData = await orderApi.getOrderById(orderId);
-        console.log('[OrderDetailPage] orderData received:', orderData);
 
         // Get user info if admin
         let orderWithUser = orderData as any;

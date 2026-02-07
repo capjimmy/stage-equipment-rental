@@ -229,9 +229,6 @@ function SearchPageContent() {
               <Link href="/search" className="text-violet-600 font-medium">
                 검색
               </Link>
-              <Link href="/about" className="text-slate-700 hover:text-violet-600 transition-colors">
-                소개
-              </Link>
               <button className="btn btn-outline">로그인</button>
             </nav>
           </div>

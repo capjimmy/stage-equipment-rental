@@ -58,13 +58,11 @@ const convertDoc = <T>(doc: DocumentData): T => {
 // Products API
 export const productApi = {
   getAll: async (options?: { includeUnavailable?: boolean }): Promise<Product[]> => {
-    console.log('[productApi.getAll] Starting...');
     const productsRef = collection(db, 'products');
     // Note: Removed orderBy to avoid composite index requirement
     // Sort client-side instead
     const q = query(productsRef, where('status', '==', 'active'));
     const snapshot = await getDocs(q);
-    console.log('[productApi.getAll] Found', snapshot.docs.length, 'products with status=active');
 
     const products: Product[] = [];
     for (const docSnap of snapshot.docs) {
@@ -98,22 +96,16 @@ export const productApi = {
       return bDate - aDate;
     });
 
-    console.log('[productApi.getAll] Products after processing:', products.length);
-
     // Filter out unavailable products unless includeUnavailable is true
     // Note: undefined availableCount means the product is available (not explicitly set to 0)
     if (!options?.includeUnavailable) {
-      const filtered = products.filter(p => p.availableCount === undefined || p.availableCount > 0);
-      console.log('[productApi.getAll] After availability filter:', products.length, '->', filtered.length);
-      return filtered;
+      return products.filter(p => p.availableCount === undefined || p.availableCount > 0);
     }
 
-    console.log('[productApi.getAll] Returning all', products.length, 'products');
     return products;
   },
 
   search: async (params: SearchParams): Promise<Product[]> => {
-    console.log('[productApi.search] Starting search with params:', params);
     const productsRef = collection(db, 'products');
     let q = query(productsRef, where('status', '==', 'active'));
 
@@ -122,7 +114,6 @@ export const productApi = {
     }
 
     const snapshot = await getDocs(q);
-    console.log('[productApi.search] Found', snapshot.docs.length, 'products with status=active');
     let products: Product[] = [];
 
     for (const docSnap of snapshot.docs) {
@@ -197,18 +188,14 @@ export const productApi = {
       products.push(product);
     }
 
-    console.log('[productApi.search] Products before filtering:', products.length);
-
     // Client-side filtering for search query
     if (params.q) {
       const searchLower = params.q.toLowerCase();
-      console.log('[productApi.search] Filtering by query:', searchLower);
       products = products.filter(p =>
         p.title.toLowerCase().includes(searchLower) ||
         p.description?.toLowerCase().includes(searchLower) ||
         p.tags?.some(t => t.name.toLowerCase().includes(searchLower))
       );
-      console.log('[productApi.search] After query filter:', products.length);
     }
 
     // Filter by tags
@@ -217,17 +204,13 @@ export const productApi = {
       products = products.filter(p =>
         p.tags?.some(t => tagNames.includes(t.name))
       );
-      console.log('[productApi.search] After tags filter:', products.length);
     }
 
     // Filter out unavailable products unless includeUnavailable is true
     if (!params.includeUnavailable) {
-      const beforeFilter = products.length;
       products = products.filter(p => p.availableCount === undefined || p.availableCount > 0);
-      console.log('[productApi.search] After availability filter:', beforeFilter, '->', products.length);
     }
 
-    console.log('[productApi.search] Final result:', products.length, 'products');
     return products;
   },
 
@@ -492,9 +475,13 @@ export const authApi = {
 // Cart API (using localStorage for now, can be moved to Firestore)
 export const cartApi = {
   getCart: async (): Promise<Cart> => {
-    const cartData = localStorage.getItem('cart');
-    if (cartData) {
-      return JSON.parse(cartData);
+    try {
+      const cartData = localStorage.getItem('cart');
+      if (cartData) {
+        return JSON.parse(cartData);
+      }
+    } catch {
+      // Invalid cart data, return empty cart
     }
     return {
       id: 'local-cart',
@@ -599,15 +586,6 @@ export const orderApi = {
         const diffDays = (endMs - startMs) / (1000 * 60 * 60 * 24);
         const days = Math.max(1, Math.ceil(diffDays) + 1);
         const price = parseFloat(String(item.product?.baseDailyPrice || '0'));
-        console.log('[orderApi.create] Item calculation:', {
-          productId: item.productId,
-          price,
-          quantity: item.quantity,
-          days,
-          startDate: itemStartDate,
-          endDate: itemEndDate,
-          subtotal: price * item.quantity * days
-        });
         return sum + (price * item.quantity * days);
       }, 0),
       createdAt: Timestamp.now(),
@@ -670,18 +648,14 @@ export const orderApi = {
   },
 
   getOrderById: async (id: string): Promise<Order> => {
-    console.log('[firebaseService] getOrderById called with id:', id);
     const docRef = doc(db, 'orders', id);
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) {
-      console.error('[firebaseService] Order not found:', id);
       throw new Error('Order not found');
     }
 
-    const order = convertDoc<Order>(docSnap);
-    console.log('[firebaseService] Order found:', order);
-    return order;
+    return convertDoc<Order>(docSnap);
   },
 
   cancel: async (id: string, reason: string): Promise<Order> => {

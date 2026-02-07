@@ -28,8 +28,12 @@ export default function Home() {
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setUser(JSON.parse(userData));
+      try {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setUser(JSON.parse(userData));
+      } catch {
+        // Invalid user data, ignore
+      }
     }
   }, []);
 

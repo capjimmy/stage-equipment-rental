@@ -72,7 +72,7 @@ export default function RentalCalendar({
   };
 
   // Handle date click
-  const handleDateClick = (value: Value) => {
+  const handleDateClick = (value: Value, event: React.MouseEvent<HTMLButtonElement>) => {
     if (!value || Array.isArray(value)) return;
 
     const selectedDate = value as Date;
@@ -86,7 +86,7 @@ export default function RentalCalendar({
         : '예약 불가';
 
       // Show tooltip
-      const rect = (event?.target as HTMLElement)?.getBoundingClientRect();
+      const rect = (event.target as HTMLElement)?.getBoundingClientRect();
       if (rect) {
         setTooltip({
           show: true,
