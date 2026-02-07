@@ -13,7 +13,7 @@ interface FeaturedSet {
   id: string;
   title: string;
   description: string;
-  detailedDescription: string;
+  detailedDescription?: string;
   imageUrl: string;
   productIds: string[];
   order: number;
