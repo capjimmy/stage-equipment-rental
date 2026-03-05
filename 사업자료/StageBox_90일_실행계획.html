@@ -1,0 +1,2201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StageBox 90일 실행 계획 - 공연장비 렌탈 마켓플레이스</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Malgun Gothic', sans-serif; background: #f0f2f5; color: #1a1a2e; line-height: 1.6; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+    /* Header */
+    .header { background: linear-gradient(135deg, #6b46c1 0%, #9f7aea 100%); color: white; padding: 40px; border-radius: 16px; margin-bottom: 30px; }
+    .header h1 { font-size: 32px; margin-bottom: 10px; }
+    .header p { opacity: 0.9; font-size: 16px; }
+
+    /* Navigation */
+    .nav { background: white; padding: 15px 20px; border-radius: 12px; margin-bottom: 30px; display: flex; flex-wrap: wrap; gap: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .nav a { color: #6b46c1; text-decoration: none; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+    .nav a:hover { background: #f3e8ff; }
+
+    /* Section */
+    .section { background: white; border-radius: 16px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .section-title { font-size: 24px; color: #6b46c1; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 3px solid #e9d8fd; display: flex; align-items: center; gap: 10px; }
+    .section-title .badge { background: #6b46c1; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; }
+    th, td { border: 1px solid #e2e8f0; padding: 12px; text-align: left; vertical-align: top; }
+    th { background: #f7fafc; font-weight: 600; color: #4a5568; }
+    tr:hover { background: #faf5ff; }
+
+    /* Cards */
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin: 20px 0; }
+    .card { background: #f8f9fa; border-radius: 12px; padding: 20px; border-left: 4px solid #6b46c1; }
+    .card h4 { color: #6b46c1; margin-bottom: 10px; }
+
+    /* Kanban */
+    .kanban { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 20px 0; }
+    .kanban-col { background: #f8f9fa; border-radius: 12px; padding: 15px; min-height: 400px; }
+    .kanban-col h4 { text-align: center; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; }
+    .kanban-col.backlog h4 { background: #e2e8f0; color: #4a5568; }
+    .kanban-col.todo h4 { background: #fed7d7; color: #c53030; }
+    .kanban-col.doing h4 { background: #fef3c7; color: #d97706; }
+    .kanban-col.done h4 { background: #c6f6d5; color: #276749; }
+    .kanban-item { background: white; border-radius: 8px; padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 13px; }
+    .kanban-item .title { font-weight: 600; margin-bottom: 8px; }
+    .kanban-item .meta { font-size: 11px; color: #718096; }
+    .kanban-item .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; margin-right: 4px; }
+    .tag-dev { background: #e9d8fd; color: #6b46c1; }
+    .tag-biz { background: #bee3f8; color: #2b6cb0; }
+    .tag-ops { background: #fef3c7; color: #d97706; }
+
+    /* Gantt */
+    .gantt { overflow-x: auto; margin: 20px 0; }
+    .gantt table { min-width: 1200px; }
+    .gantt th, .gantt td { text-align: center; padding: 8px 4px; font-size: 12px; }
+    .gantt .task-name { text-align: left; min-width: 200px; font-weight: 500; }
+    .gantt .bar { height: 24px; border-radius: 4px; }
+    .bar-supply { background: linear-gradient(90deg, #6b46c1, #9f7aea); }
+    .bar-demand { background: linear-gradient(90deg, #38a169, #68d391); }
+    .bar-auto { background: linear-gradient(90deg, #d69e2e, #f6e05e); }
+    .bar-ops { background: linear-gradient(90deg, #e53e3e, #fc8181); }
+
+    /* Milestone */
+    .milestone-timeline { display: flex; justify-content: space-between; margin: 30px 0; position: relative; }
+    .milestone-timeline::before { content: ''; position: absolute; top: 30px; left: 0; right: 0; height: 4px; background: #e2e8f0; }
+    .milestone-item { text-align: center; position: relative; flex: 1; }
+    .milestone-dot { width: 60px; height: 60px; border-radius: 50%; background: #6b46c1; color: white; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-weight: bold; position: relative; z-index: 1; }
+    .milestone-item.completed .milestone-dot { background: #38a169; }
+    .milestone-label { font-size: 13px; font-weight: 600; }
+    .milestone-date { font-size: 11px; color: #718096; }
+
+    /* Highlight boxes */
+    .highlight { background: #faf5ff; border: 1px solid #d6bcfa; padding: 20px; border-radius: 12px; margin: 15px 0; }
+    .warning { background: #fffaf0; border: 1px solid #fbd38d; padding: 20px; border-radius: 12px; margin: 15px 0; }
+    .success { background: #f0fff4; border: 1px solid #9ae6b4; padding: 20px; border-radius: 12px; margin: 15px 0; }
+    .danger { background: #fff5f5; border: 1px solid #feb2b2; padding: 20px; border-radius: 12px; margin: 15px 0; }
+
+    /* Lists */
+    ul, ol { margin-left: 20px; margin-bottom: 15px; }
+    li { margin-bottom: 8px; }
+
+    /* Code blocks */
+    .code { background: #2d3748; color: #e2e8f0; padding: 15px; border-radius: 8px; font-family: 'Consolas', monospace; font-size: 13px; overflow-x: auto; margin: 15px 0; }
+
+    /* Templates */
+    .template { background: #f7fafc; border: 2px dashed #cbd5e0; padding: 20px; border-radius: 12px; margin: 15px 0; }
+    .template h5 { color: #6b46c1; margin-bottom: 10px; }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
+    .stat-box { background: linear-gradient(135deg, #6b46c1, #9f7aea); color: white; padding: 20px; border-radius: 12px; text-align: center; }
+    .stat-box .number { font-size: 32px; font-weight: bold; }
+    .stat-box .label { font-size: 13px; opacity: 0.9; }
+
+    /* Assumptions */
+    .assumptions { background: #edf2f7; padding: 20px; border-radius: 12px; margin-bottom: 30px; }
+    .assumptions h4 { margin-bottom: 10px; }
+    .assumptions ul { margin-bottom: 0; }
+
+    /* Print */
+    @media print {
+      body { background: white; }
+      .section { box-shadow: none; border: 1px solid #e2e8f0; }
+      .nav { display: none; }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .kanban { grid-template-columns: 1fr; }
+      .milestone-timeline { flex-direction: column; gap: 20px; }
+      .milestone-timeline::before { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>StageBox 90일 실행 계획</h1>
+      <p>공연장비·소품·의상 렌탈 마켓플레이스 | 공급 확보 → 거래 발생 → 운영 자동화</p>
+      <p style="margin-top: 15px; font-size: 14px;">작성일: 2026년 2월 | Version 1.0</p>
+    </header>
+
+    <!-- Assumptions -->
+    <div class="assumptions">
+      <h4>📋 기본 가정 사항</h4>
+      <ul>
+        <li><strong>현재 상태:</strong> 사이트 오픈 완료, 기본 기능(상품등록, 예약, 결제) 구현됨, 공급자 0~5개 수준</li>
+        <li><strong>팀 규모:</strong> 1~3명 (대표 + 개발자/운영자)</li>
+        <li><strong>타겟 시장:</strong> 대학로 극단, 소극장, 독립 제작사, 대학 연극부 (서울/수도권 우선)</li>
+        <li><strong>수익 분배:</strong> 플랫폼 50% : 공급자 50% (프로모션 시 40:60)</li>
+        <li><strong>90일 목표:</strong> 공급자 30개, 월 거래액 3,000만원, 첫 정산 완료</li>
+      </ul>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="nav">
+      <a href="#summary">A. 90일 요약</a>
+      <a href="#kanban">B. 칸반보드</a>
+      <a href="#gantt">C. 간트차트</a>
+      <a href="#milestone">D. 마일스톤</a>
+      <a href="#roadmap">E. 로드맵</a>
+      <a href="#risk">F. 리스크대응</a>
+      <a href="#supplier">G. 공급자섭외</a>
+      <a href="#data">H. 데이터구조</a>
+      <a href="#calendar">I. 예약/재고</a>
+      <a href="#settlement">J. 정산로직</a>
+    </nav>
+
+    <!-- ========== A. 90일 실행 요약 ========== -->
+    <section class="section" id="summary">
+      <h2 class="section-title"><span class="badge">A</span> 90일 실행 요약 (Executive Summary)</h2>
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="number">30</div>
+          <div class="label">공급자 확보</div>
+        </div>
+        <div class="stat-box">
+          <div class="number">500+</div>
+          <div class="label">등록 상품</div>
+        </div>
+        <div class="stat-box">
+          <div class="number">50</div>
+          <div class="label">거래 건수</div>
+        </div>
+        <div class="stat-box">
+          <div class="number">3천만</div>
+          <div class="label">월 거래액</div>
+        </div>
+      </div>
+
+      <h3 style="margin: 25px 0 15px;">3단계 실행 프레임워크</h3>
+      <table>
+        <tr>
+          <th width="15%">단계</th>
+          <th width="15%">기간</th>
+          <th width="25%">핵심 목표</th>
+          <th width="25%">주요 활동</th>
+          <th width="20%">성공 지표</th>
+        </tr>
+        <tr>
+          <td style="background:#faf5ff;"><strong>Phase 1</strong><br>공급 확보</td>
+          <td>1~4주</td>
+          <td>초기 공급자 10개 확보<br>핵심 카테고리 커버</td>
+          <td>
+            - 대학로/홍대 권역 직접 방문<br>
+            - 기존 렌탈업체 컨택<br>
+            - 온보딩 프로세스 확립
+          </td>
+          <td>
+            ✓ 공급자 10개<br>
+            ✓ 상품 150개<br>
+            ✓ 계약서 템플릿
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#f0fff4;"><strong>Phase 2</strong><br>거래 발생</td>
+          <td>5~8주</td>
+          <td>첫 거래 발생<br>수요-공급 매칭</td>
+          <td>
+            - 극단/제작사 영업<br>
+            - 시즌 할인 프로모션<br>
+            - 첫 정산 완료
+          </td>
+          <td>
+            ✓ 거래 20건<br>
+            ✓ 거래액 1,000만원<br>
+            ✓ 정산 1회 완료
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#fffaf0;"><strong>Phase 3</strong><br>운영 자동화</td>
+          <td>9~12주</td>
+          <td>반복 업무 자동화<br>확장 기반 구축</td>
+          <td>
+            - 정산 자동화<br>
+            - 알림/리마인더 자동화<br>
+            - 재고 충돌 방지 시스템
+          </td>
+          <td>
+            ✓ 공급자 30개<br>
+            ✓ 월 거래액 3,000만원<br>
+            ✓ 운영시간 50% 감소
+          </td>
+        </tr>
+      </table>
+
+      <h3 style="margin: 25px 0 15px;">핵심 실행 원칙</h3>
+      <div class="card-grid">
+        <div class="card">
+          <h4>1. 공급 우선 (Supply First)</h4>
+          <p>수요 없이 공급 확보 → "볼거리 있는 플랫폼"을 만들어야 수요자가 온다. 처음 4주는 영업/섭외에 80% 집중.</p>
+        </div>
+        <div class="card">
+          <h4>2. 직접 거래 유도</h4>
+          <p>초기엔 플랫폼 바깥 거래 방지보다 "플랫폼 통해 거래하면 편하다"는 경험 제공이 중요. 지나친 통제 금지.</p>
+        </div>
+        <div class="card">
+          <h4>3. 신뢰 구축 최우선</h4>
+          <p>첫 거래 + 첫 정산이 가장 중요한 마일스톤. 1건이라도 성공 사례를 만들어 레퍼런스화.</p>
+        </div>
+        <div class="card">
+          <h4>4. 문제 발생 = 정책 수립 기회</h4>
+          <p>파손, 분실, 지연 등 문제가 생기면 즉시 정책화. 미리 모든 걸 정하기보다 실제 케이스 기반으로 개선.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== B. 칸반 보드 ========== -->
+    <section class="section" id="kanban">
+      <h2 class="section-title"><span class="badge">B</span> 칸반(Kanban) 보드</h2>
+      <p style="margin-bottom: 20px; color: #718096;">각 카드에는 <strong>작업 정의(Definition)</strong>, <strong>산출물(Deliverables)</strong>, <strong>완료 기준(Acceptance Criteria)</strong>이 포함됩니다.</p>
+
+      <!-- Phase 1 Kanban -->
+      <h3 style="margin: 20px 0 15px; color: #6b46c1;">Phase 1: 공급 확보 (1~4주)</h3>
+      <div class="kanban">
+        <div class="kanban-col backlog">
+          <h4>📋 Backlog</h4>
+          <div class="kanban-item">
+            <div class="title">공급자 DB 구축</div>
+            <p><strong>정의:</strong> 대학로/홍대 권역 렌탈업체 100개 리스트업</p>
+            <p><strong>산출물:</strong> 엑셀/노션 DB (업체명, 연락처, 품목, 규모)</p>
+            <p><strong>완료기준:</strong> 100개 업체 정보 수집, 연락처 확보율 80%</p>
+            <div class="meta"><span class="tag tag-biz">영업</span> 예상 3일</div>
+          </div>
+          <div class="kanban-item">
+            <div class="title">공급자 계약서 작성</div>
+            <p><strong>정의:</strong> 입점 계약서, 수수료 정책, 정산 조건 문서화</p>
+            <p><strong>산출물:</strong> 계약서 PDF, 전자서명 연동</p>
+            <p><strong>완료기준:</strong> 법무 검토 완료, 3개 업체 테스트 서명</p>
+            <div class="meta"><span class="tag tag-ops">운영</span> 예상 5일</div>
+          </div>
+        </div>
+        <div class="kanban-col todo">
+          <h4>📌 To Do (이번 주)</h4>
+          <div class="kanban-item">
+            <div class="title">온보딩 가이드 제작</div>
+            <p><strong>정의:</strong> 공급자용 상품 등록 가이드 (사진 촬영법, 설명 작성법)</p>
+            <p><strong>산출물:</strong> PDF 가이드, 영상 튜토리얼 1개</p>
+            <p><strong>완료기준:</strong> 비전문가도 10분 내 상품 등록 가능</p>
+            <div class="meta"><span class="tag tag-ops">운영</span> 예상 3일</div>
+          </div>
+          <div class="kanban-item">
+            <div class="title">대학로 현장 방문 #1</div>
+            <p><strong>정의:</strong> 대학로 의상/소품 렌탈샵 5개 직접 방문</p>
+            <p><strong>산출물:</strong> 방문 보고서, 관심 표명 업체 리스트</p>
+            <p><strong>완료기준:</strong> 5개 중 2개 이상 입점 의향 확보</p>
+            <div class="meta"><span class="tag tag-biz">영업</span> 예상 1일</div>
+          </div>
+        </div>
+        <div class="kanban-col doing">
+          <h4>🔨 Doing (진행 중)</h4>
+          <div class="kanban-item">
+            <div class="title">공급자 관리자 페이지 개선</div>
+            <p><strong>정의:</strong> 상품 일괄 등록, 재고 캘린더 뷰 추가</p>
+            <p><strong>산출물:</strong> CSV 업로드 기능, 캘린더 UI</p>
+            <p><strong>완료기준:</strong> 50개 상품 1분 내 일괄 등록 가능</p>
+            <div class="meta"><span class="tag tag-dev">개발</span> 진행률 60%</div>
+          </div>
+        </div>
+        <div class="kanban-col done">
+          <h4>✅ Done (완료)</h4>
+          <div class="kanban-item">
+            <div class="title">플랫폼 베타 오픈</div>
+            <p><strong>정의:</strong> 기본 기능 구현 및 배포</p>
+            <p><strong>산출물:</strong> 라이브 사이트</p>
+            <p><strong>완료기준:</strong> 상품 등록/검색/예약 가능</p>
+            <div class="meta"><span class="tag tag-dev">개발</span> ✓ 완료</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Full Backlog Table -->
+      <h3 style="margin: 30px 0 15px;">전체 백로그 (90일)</h3>
+      <table>
+        <tr>
+          <th width="5%">ID</th>
+          <th width="8%">Phase</th>
+          <th width="15%">작업명</th>
+          <th width="20%">작업 정의</th>
+          <th width="20%">산출물</th>
+          <th width="20%">완료 기준</th>
+          <th width="6%">예상</th>
+          <th width="6%">유형</th>
+        </tr>
+        <!-- Phase 1 -->
+        <tr style="background:#faf5ff;">
+          <td>P1-01</td>
+          <td>Phase 1</td>
+          <td><strong>공급자 DB 구축</strong></td>
+          <td>대학로/홍대/이태원 권역 렌탈업체 리스트업</td>
+          <td>노션 DB (업체명, 연락처, 품목, 규모, 상태)</td>
+          <td>100개 업체, 연락처 80% 확보</td>
+          <td>3일</td>
+          <td>영업</td>
+        </tr>
+        <tr style="background:#faf5ff;">
+          <td>P1-02</td>
+          <td>Phase 1</td>
+          <td><strong>입점 계약서 작성</strong></td>
+          <td>수수료, 정산, 책임 범위 포함 계약서</td>
+          <td>계약서 PDF, 전자서명 폼</td>
+          <td>법무 검토 완료, 테스트 서명 3건</td>
+          <td>5일</td>
+          <td>운영</td>
+        </tr>
+        <tr style="background:#faf5ff;">
+          <td>P1-03</td>
+          <td>Phase 1</td>
+          <td><strong>온보딩 가이드</strong></td>
+          <td>상품 등록, 사진 촬영, 가격 책정 가이드</td>
+          <td>PDF 가이드, 영상 1개</td>
+          <td>비전문가 10분 내 등록 가능</td>
+          <td>3일</td>
+          <td>운영</td>
+        </tr>
+        <tr style="background:#faf5ff;">
+          <td>P1-04</td>
+          <td>Phase 1</td>
+          <td><strong>공급자 섭외 #1~#5</strong></td>
+          <td>대학로 현장 방문 5회</td>
+          <td>방문 보고서, 입점 의향서</td>
+          <td>10개 업체 입점 완료</td>
+          <td>10일</td>
+          <td>영업</td>
+        </tr>
+        <tr style="background:#faf5ff;">
+          <td>P1-05</td>
+          <td>Phase 1</td>
+          <td><strong>상품 일괄등록 기능</strong></td>
+          <td>CSV/엑셀 업로드로 대량 상품 등록</td>
+          <td>CSV 템플릿, 업로드 기능</td>
+          <td>50개 상품 1분 내 등록</td>
+          <td>4일</td>
+          <td>개발</td>
+        </tr>
+        <tr style="background:#faf5ff;">
+          <td>P1-06</td>
+          <td>Phase 1</td>
+          <td><strong>공급자 대시보드 v1</strong></td>
+          <td>예약 현황, 재고 캘린더, 매출 통계</td>
+          <td>대시보드 페이지</td>
+          <td>예약/매출 한눈에 확인 가능</td>
+          <td>5일</td>
+          <td>개발</td>
+        </tr>
+        <!-- Phase 2 -->
+        <tr style="background:#f0fff4;">
+          <td>P2-01</td>
+          <td>Phase 2</td>
+          <td><strong>극단/제작사 DB 구축</strong></td>
+          <td>수요자(극단, 제작사, 학교) 리스트업</td>
+          <td>노션 DB (단체명, 담당자, 연락처, 장르)</td>
+          <td>50개 단체, 연락처 70% 확보</td>
+          <td>3일</td>
+          <td>영업</td>
+        </tr>
+        <tr style="background:#f0fff4;">
+          <td>P2-02</td>
+          <td>Phase 2</td>
+          <td><strong>수요자 영업 캠페인</strong></td>
+          <td>DM/이메일/전화 영업 실행</td>
+          <td>영업 스크립트, 발송 리포트</td>
+          <td>응답률 10%, 예약 문의 20건</td>
+          <td>14일</td>
+          <td>영업</td>
+        </tr>
+        <tr style="background:#f0fff4;">
+          <td>P2-03</td>
+          <td>Phase 2</td>
+          <td><strong>오픈 프로모션 기획</strong></td>
+          <td>첫 달 수수료 60:40, 배송비 지원</td>
+          <td>프로모션 페이지, 배너</td>
+          <td>프로모션 통한 거래 10건</td>
+          <td>2일</td>
+          <td>마케팅</td>
+        </tr>
+        <tr style="background:#f0fff4;">
+          <td>P2-04</td>
+          <td>Phase 2</td>
+          <td><strong>첫 거래 성사</strong></td>
+          <td>실제 렌탈 예약 → 발송 → 회수 완료</td>
+          <td>거래 완료 보고서, 후기</td>
+          <td>클레임 없이 1건 완료</td>
+          <td>7일</td>
+          <td>운영</td>
+        </tr>
+        <tr style="background:#f0fff4;">
+          <td>P2-05</td>
+          <td>Phase 2</td>
+          <td><strong>첫 정산 실행</strong></td>
+          <td>월말 정산, 수수료 정산, 입금 처리</td>
+          <td>정산서, 세금계산서, 입금 증빙</td>
+          <td>공급자 3개사 이상 정산 완료</td>
+          <td>3일</td>
+          <td>운영</td>
+        </tr>
+        <tr style="background:#f0fff4;">
+          <td>P2-06</td>
+          <td>Phase 2</td>
+          <td><strong>결제 시스템 연동</strong></td>
+          <td>PG사 연동, 선결제/후결제 옵션</td>
+          <td>결제 페이지, 영수증</td>
+          <td>카드/계좌이체 결제 가능</td>
+          <td>5일</td>
+          <td>개발</td>
+        </tr>
+        <!-- Phase 3 -->
+        <tr style="background:#fffaf0;">
+          <td>P3-01</td>
+          <td>Phase 3</td>
+          <td><strong>정산 자동화</strong></td>
+          <td>월말 자동 정산서 생성, 이메일 발송</td>
+          <td>정산 자동화 시스템</td>
+          <td>수동 작업 0, 오류율 0%</td>
+          <td>5일</td>
+          <td>개발</td>
+        </tr>
+        <tr style="background:#fffaf0;">
+          <td>P3-02</td>
+          <td>Phase 3</td>
+          <td><strong>알림 자동화</strong></td>
+          <td>예약확정, 발송, 반납예정 알림</td>
+          <td>알림 시스템 (이메일/SMS/카톡)</td>
+          <td>주요 이벤트 100% 알림 발송</td>
+          <td>4일</td>
+          <td>개발</td>
+        </tr>
+        <tr style="background:#fffaf0;">
+          <td>P3-03</td>
+          <td>Phase 3</td>
+          <td><strong>재고 충돌 방지</strong></td>
+          <td>동시 예약 시 실시간 재고 체크</td>
+          <td>충돌 방지 로직, 대기열 기능</td>
+          <td>더블부킹 0건</td>
+          <td>4일</td>
+          <td>개발</td>
+        </tr>
+        <tr style="background:#fffaf0;">
+          <td>P3-04</td>
+          <td>Phase 3</td>
+          <td><strong>리뷰/평점 시스템</strong></td>
+          <td>거래 완료 후 리뷰 작성 기능</td>
+          <td>리뷰 UI, 평점 집계</td>
+          <td>거래 대비 리뷰율 30%</td>
+          <td>3일</td>
+          <td>개발</td>
+        </tr>
+        <tr style="background:#fffaf0;">
+          <td>P3-05</td>
+          <td>Phase 3</td>
+          <td><strong>공급자 20개 추가 확보</strong></td>
+          <td>Phase 1 성공 레퍼런스로 추가 섭외</td>
+          <td>입점 계약 20건</td>
+          <td>총 30개 공급자 확보</td>
+          <td>14일</td>
+          <td>영업</td>
+        </tr>
+        <tr style="background:#fffaf0;">
+          <td>P3-06</td>
+          <td>Phase 3</td>
+          <td><strong>운영 매뉴얼 작성</strong></td>
+          <td>CS 대응, 클레임 처리, 정산 절차 문서화</td>
+          <td>운영 매뉴얼 PDF/노션</td>
+          <td>신규 담당자 1일 내 업무 가능</td>
+          <td>5일</td>
+          <td>운영</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- ========== C. 간트 타임라인 ========== -->
+    <section class="section" id="gantt">
+      <h2 class="section-title"><span class="badge">C</span> 간트(Gantt) 타임라인</h2>
+
+      <div class="gantt">
+        <table>
+          <tr>
+            <th class="task-name">작업</th>
+            <th>W1</th><th>W2</th><th>W3</th><th>W4</th>
+            <th>W5</th><th>W6</th><th>W7</th><th>W8</th>
+            <th>W9</th><th>W10</th><th>W11</th><th>W12</th>
+          </tr>
+          <!-- Phase 1 -->
+          <tr><td colspan="13" style="background:#e9d8fd; font-weight:bold;">Phase 1: 공급 확보</td></tr>
+          <tr>
+            <td class="task-name">공급자 DB 구축</td>
+            <td colspan="2"><div class="bar bar-supply"></div></td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td class="task-name">입점 계약서 작성</td>
+            <td><div class="bar bar-ops"></div></td>
+            <td><div class="bar bar-ops"></div></td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td class="task-name">온보딩 가이드 제작</td>
+            <td></td>
+            <td><div class="bar bar-ops"></div></td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td class="task-name">현장 방문 섭외 (10개 목표)</td>
+            <td><div class="bar bar-supply"></div></td>
+            <td><div class="bar bar-supply"></div></td>
+            <td><div class="bar bar-supply"></div></td>
+            <td><div class="bar bar-supply"></div></td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td class="task-name">상품 일괄등록 기능</td>
+            <td></td>
+            <td><div class="bar bar-auto"></div></td>
+            <td><div class="bar bar-auto"></div></td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td class="task-name">공급자 대시보드 v1</td>
+            <td></td><td></td>
+            <td><div class="bar bar-auto"></div></td>
+            <td><div class="bar bar-auto"></div></td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          </tr>
+          <!-- Phase 2 -->
+          <tr><td colspan="13" style="background:#c6f6d5; font-weight:bold;">Phase 2: 거래 발생</td></tr>
+          <tr>
+            <td class="task-name">극단/제작사 DB 구축</td>
+            <td></td><td></td><td></td>
+            <td><div class="bar bar-demand"></div></td>
+            <td><div class="bar bar-demand"></div></td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td class="task-name">수요자 영업 캠페인</td>
+            <td></td><td></td><td></td><td></td>
+            <td><div class="bar bar-demand"></div></td>
+            <td><div class="bar bar-demand"></div></td>
+            <td><div class="bar bar-demand"></div></td>
+            <td><div class="bar bar-demand"></div></td>
+            <td></td><td></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td class="task-name">오픈 프로모션 실행</td>
+            <td></td><td></td><td></td><td></td>
+            <td><div class="bar bar-demand"></div></td>
+            <td><div class="bar bar-demand"></div></td>
+            <td><div class="bar bar-demand"></div></td>
+            <td><div class="bar bar-demand"></div></td>
+            <td></td><td></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td class="task-name">결제 시스템 연동</td>
+            <td></td><td></td><td></td>
+            <td><div class="bar bar-auto"></div></td>
+            <td><div class="bar bar-auto"></div></td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td class="task-name">첫 거래 성사 & 정산</td>
+            <td></td><td></td><td></td><td></td><td></td>
+            <td><div class="bar bar-ops"></div></td>
+            <td><div class="bar bar-ops"></div></td>
+            <td><div class="bar bar-ops"></div></td>
+            <td></td><td></td><td></td><td></td>
+          </tr>
+          <!-- Phase 3 -->
+          <tr><td colspan="13" style="background:#fef3c7; font-weight:bold;">Phase 3: 운영 자동화</td></tr>
+          <tr>
+            <td class="task-name">정산 자동화</td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            <td><div class="bar bar-auto"></div></td>
+            <td><div class="bar bar-auto"></div></td>
+            <td></td><td></td><td></td>
+          </tr>
+          <tr>
+            <td class="task-name">알림 자동화</td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            <td><div class="bar bar-auto"></div></td>
+            <td><div class="bar bar-auto"></div></td>
+            <td></td><td></td>
+          </tr>
+          <tr>
+            <td class="task-name">재고 충돌 방지</td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            <td><div class="bar bar-auto"></div></td>
+            <td><div class="bar bar-auto"></div></td>
+            <td></td><td></td>
+          </tr>
+          <tr>
+            <td class="task-name">리뷰/평점 시스템</td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            <td><div class="bar bar-auto"></div></td>
+            <td><div class="bar bar-auto"></div></td>
+            <td></td>
+          </tr>
+          <tr>
+            <td class="task-name">공급자 추가 확보 (+20)</td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            <td><div class="bar bar-supply"></div></td>
+            <td><div class="bar bar-supply"></div></td>
+            <td><div class="bar bar-supply"></div></td>
+            <td><div class="bar bar-supply"></div></td>
+            <td><div class="bar bar-supply"></div></td>
+          </tr>
+          <tr>
+            <td class="task-name">운영 매뉴얼 정비</td>
+            <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+            <td><div class="bar bar-ops"></div></td>
+            <td><div class="bar bar-ops"></div></td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="margin-top: 20px; display: flex; gap: 20px; flex-wrap: wrap;">
+        <div><span style="display:inline-block;width:20px;height:12px;background:linear-gradient(90deg, #6b46c1, #9f7aea);border-radius:2px;"></span> 공급 확보</div>
+        <div><span style="display:inline-block;width:20px;height:12px;background:linear-gradient(90deg, #38a169, #68d391);border-radius:2px;"></span> 수요 창출</div>
+        <div><span style="display:inline-block;width:20px;height:12px;background:linear-gradient(90deg, #d69e2e, #f6e05e);border-radius:2px;"></span> 자동화/개발</div>
+        <div><span style="display:inline-block;width:20px;height:12px;background:linear-gradient(90deg, #e53e3e, #fc8181);border-radius:2px;"></span> 운영</div>
+      </div>
+    </section>
+
+    <!-- ========== D. 마일스톤 ========== -->
+    <section class="section" id="milestone">
+      <h2 class="section-title"><span class="badge">D</span> 마일스톤 (Milestones)</h2>
+
+      <div class="milestone-timeline">
+        <div class="milestone-item">
+          <div class="milestone-dot">M1</div>
+          <div class="milestone-label">첫 공급자 입점</div>
+          <div class="milestone-date">Week 2</div>
+        </div>
+        <div class="milestone-item">
+          <div class="milestone-dot">M2</div>
+          <div class="milestone-label">공급자 10개</div>
+          <div class="milestone-date">Week 4</div>
+        </div>
+        <div class="milestone-item">
+          <div class="milestone-dot">M3</div>
+          <div class="milestone-label">첫 거래 완료</div>
+          <div class="milestone-date">Week 6</div>
+        </div>
+        <div class="milestone-item">
+          <div class="milestone-dot">M4</div>
+          <div class="milestone-label">첫 정산 완료</div>
+          <div class="milestone-date">Week 8</div>
+        </div>
+        <div class="milestone-item">
+          <div class="milestone-dot">M5</div>
+          <div class="milestone-label">자동화 완료</div>
+          <div class="milestone-date">Week 10</div>
+        </div>
+        <div class="milestone-item">
+          <div class="milestone-dot">M6</div>
+          <div class="milestone-label">90일 목표 달성</div>
+          <div class="milestone-date">Week 12</div>
+        </div>
+      </div>
+
+      <table style="margin-top: 40px;">
+        <tr>
+          <th width="10%">마일스톤</th>
+          <th width="10%">시점</th>
+          <th width="20%">명칭</th>
+          <th width="25%">측정 가능한 KPI</th>
+          <th width="20%">완료 조건</th>
+          <th width="15%">의존성</th>
+        </tr>
+        <tr>
+          <td style="text-align:center;"><strong>M1</strong></td>
+          <td>Week 2</td>
+          <td><strong>첫 공급자 입점</strong></td>
+          <td>
+            - 입점 계약 1건 체결<br>
+            - 상품 10개 이상 등록
+          </td>
+          <td>계약서 서명, 상품 라이브</td>
+          <td>계약서 준비</td>
+        </tr>
+        <tr>
+          <td style="text-align:center;"><strong>M2</strong></td>
+          <td>Week 4</td>
+          <td><strong>공급자 10개 확보</strong></td>
+          <td>
+            - 입점 공급자 10개<br>
+            - 총 상품 150개<br>
+            - 3개 카테고리 커버
+          </td>
+          <td>모든 계약 체결, 상품 라이브</td>
+          <td>M1</td>
+        </tr>
+        <tr>
+          <td style="text-align:center;"><strong>M3</strong></td>
+          <td>Week 6</td>
+          <td><strong>첫 거래 완료</strong></td>
+          <td>
+            - 예약 → 결제 → 발송 → 회수 완료<br>
+            - 클레임 없이 거래 종료<br>
+            - 고객 후기 1건
+          </td>
+          <td>거래 완료 상태 전환</td>
+          <td>M2, 결제 연동</td>
+        </tr>
+        <tr>
+          <td style="text-align:center;"><strong>M4</strong></td>
+          <td>Week 8</td>
+          <td><strong>첫 정산 완료</strong></td>
+          <td>
+            - 월 거래액 1,000만원<br>
+            - 정산 3건 이상 완료<br>
+            - 정산 분쟁 0건
+          </td>
+          <td>공급자 입금 확인, 세금계산서 발행</td>
+          <td>M3</td>
+        </tr>
+        <tr>
+          <td style="text-align:center;"><strong>M5</strong></td>
+          <td>Week 10</td>
+          <td><strong>자동화 완료</strong></td>
+          <td>
+            - 정산 자동 생성<br>
+            - 알림 자동 발송<br>
+            - 더블부킹 0건
+          </td>
+          <td>수동 개입 없이 1주일 운영</td>
+          <td>M4</td>
+        </tr>
+        <tr>
+          <td style="text-align:center;"><strong>M6</strong></td>
+          <td>Week 12</td>
+          <td><strong>90일 목표 달성</strong></td>
+          <td>
+            - 공급자 30개<br>
+            - 월 거래액 3,000만원<br>
+            - 거래 50건<br>
+            - NPS 40 이상
+          </td>
+          <td>대시보드 수치 확인</td>
+          <td>M5</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- ========== E. 로드맵 ========== -->
+    <section class="section" id="roadmap">
+      <h2 class="section-title"><span class="badge">E</span> 로드맵 (0~12개월, 라이센스 렌탈 포함)</h2>
+
+      <table>
+        <tr>
+          <th width="15%">기간</th>
+          <th width="15%">단계명</th>
+          <th width="25%">핵심 목표</th>
+          <th width="25%">주요 기능/활동</th>
+          <th width="20%">KPI</th>
+        </tr>
+        <tr style="background:#faf5ff;">
+          <td><strong>0~3개월</strong><br>(현재)</td>
+          <td>🚀 Launch</td>
+          <td>
+            <strong>시장 검증</strong><br>
+            - 공급-수요 매칭 증명<br>
+            - 첫 수익 발생
+          </td>
+          <td>
+            ▸ 공급자 30개 확보<br>
+            ▸ 수요자 영업 (극단/제작사)<br>
+            ▸ 정산/알림 자동화<br>
+            ▸ 파손/분실 정책 수립
+          </td>
+          <td>
+            - 공급자 30개<br>
+            - 월 거래 3,000만원<br>
+            - 거래 50건/월
+          </td>
+        </tr>
+        <tr style="background:#f0fff4;">
+          <td><strong>3~6개월</strong></td>
+          <td>📈 Growth</td>
+          <td>
+            <strong>성장 가속화</strong><br>
+            - 거래량 3배 증가<br>
+            - 라이센스 렌탈 준비
+          </td>
+          <td>
+            ▸ 모바일 앱 출시<br>
+            ▸ 추천/검색 고도화<br>
+            ▸ 멀티벤더 기능 강화<br>
+            ▸ <strong>라이센스 정보 DB 구축</strong><br>
+            ▸ 권리사 파트너십 시작
+          </td>
+          <td>
+            - 공급자 100개<br>
+            - 월 거래 1억원<br>
+            - 라이센스 DB 100건
+          </td>
+        </tr>
+        <tr style="background:#fffaf0;">
+          <td><strong>6~12개월</strong></td>
+          <td>🎯 Scale</td>
+          <td>
+            <strong>플랫폼 확장</strong><br>
+            - 라이센스 렌탈 런칭<br>
+            - 지역 확장 (부산/대구)
+          </td>
+          <td>
+            ▸ <strong>라이센스 견적 자동화</strong><br>
+            ▸ <strong>장비+라이센스 패키지</strong><br>
+            ▸ 보험 상품 연계<br>
+            ▸ 기업 고객 전용 서비스<br>
+            ▸ 해외 공연 지원
+          </td>
+          <td>
+            - 공급자 300개<br>
+            - 월 거래 3억원<br>
+            - 라이센스 거래 20건/월
+          </td>
+        </tr>
+      </table>
+
+      <h3 style="margin: 30px 0 15px;">🎭 라이센스 렌탈 확장 3단계 로드맵</h3>
+      <div class="highlight">
+        <p><strong>라이센스 렌탈이란?</strong> 공연권, 대본, 음원, 안무 등 공연에 필요한 권리/저작물의 사용권을 중개·렌탈하는 서비스</p>
+      </div>
+
+      <table>
+        <tr>
+          <th width="12%">단계</th>
+          <th width="12%">시점</th>
+          <th width="20%">목표</th>
+          <th width="25%">필요 기능</th>
+          <th width="15%">리스크</th>
+          <th width="16%">법무 체크</th>
+        </tr>
+        <tr>
+          <td><strong>1단계</strong><br>정보 DB</td>
+          <td>3~5개월</td>
+          <td>라이센스 정보 수집<br>검색 가능하게 제공</td>
+          <td>
+            - 라이센스 DB 스키마<br>
+            - 권리사 정보 크롤링/입력<br>
+            - 검색/필터 UI
+          </td>
+          <td>
+            - 정보 정확성<br>
+            - 권리사 반발
+          </td>
+          <td>
+            - 정보 제공 면책<br>
+            - 저작권 표시
+          </td>
+        </tr>
+        <tr>
+          <td><strong>2단계</strong><br>견적 자동화</td>
+          <td>5~8개월</td>
+          <td>견적 문의 대행<br>자동 연결 시스템</td>
+          <td>
+            - 견적 요청 폼<br>
+            - 권리사 연결 CRM<br>
+            - 견적서 자동 생성
+          </td>
+          <td>
+            - 수수료 거부<br>
+            - 직거래 전환
+          </td>
+          <td>
+            - 중개업 신고<br>
+            - 계약 대리권
+          </td>
+        </tr>
+        <tr>
+          <td><strong>3단계</strong><br>패키지화</td>
+          <td>8~12개월</td>
+          <td>장비+라이센스 통합<br>원스톱 패키지 상품</td>
+          <td>
+            - 패키지 상품 UI<br>
+            - 통합 결제<br>
+            - 권리 계약 전자화
+          </td>
+          <td>
+            - 권리 분쟁<br>
+            - 복잡한 정산
+          </td>
+          <td>
+            - 저작권 계약서<br>
+            - 2차 저작물 조항<br>
+            - 면책 조항
+          </td>
+        </tr>
+      </table>
+
+      <h4 style="margin: 25px 0 15px;">라이센스 렌탈 법무 체크리스트</h4>
+      <div class="warning">
+        <ul>
+          <li><strong>저작권법 검토:</strong> 공연권, 복제권, 배포권 범위 명확화</li>
+          <li><strong>중개업 등록:</strong> 통신판매중개업 또는 저작권 중개업 검토</li>
+          <li><strong>계약서 표준화:</strong> 권리 양도 vs 사용 허락 구분, 기간/지역/매체 제한</li>
+          <li><strong>면책 조항:</strong> 권리 분쟁 시 플랫폼 책임 범위</li>
+          <li><strong>정산 분리:</strong> 장비 렌탈과 라이센스 수익 분리 회계</li>
+          <li><strong>개인정보:</strong> 권리자 정보 수집/이용 동의</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ========== F. 리스크 & 대응 ========== -->
+    <section class="section" id="risk">
+      <h2 class="section-title"><span class="badge">F</span> 리스크 & 대응 매트릭스</h2>
+
+      <table>
+        <tr>
+          <th width="12%">리스크 유형</th>
+          <th width="8%">발생<br>확률</th>
+          <th width="8%">영향도</th>
+          <th width="25%">시나리오 예시</th>
+          <th width="25%">예방 조치</th>
+          <th width="22%">대응 프로세스</th>
+        </tr>
+        <tr>
+          <td style="background:#fed7d7;"><strong>파손</strong></td>
+          <td>높음</td>
+          <td>중간</td>
+          <td>의상 찢어짐, 소품 깨짐, 장비 고장</td>
+          <td>
+            - 사전 상태 사진 필수<br>
+            - 파손 시 보상 정책 고지<br>
+            - 고가 품목 보증금 수취
+          </td>
+          <td>
+            1. 사진 비교 확인<br>
+            2. 파손 정도 판정 (경미/중대)<br>
+            3. 수선비 or 대체비 청구<br>
+            4. 보증금에서 차감 or 추가 결제
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#fed7d7;"><strong>분실</strong></td>
+          <td>낮음</td>
+          <td>높음</td>
+          <td>소품 일부 누락, 전체 분실</td>
+          <td>
+            - 체크리스트 발송/회수<br>
+            - 분실 시 100% 배상 고지<br>
+            - 추적 가능 배송
+          </td>
+          <td>
+            1. 체크리스트 대조<br>
+            2. 수요자에게 확인 요청<br>
+            3. 시가 기준 배상<br>
+            4. 미이행 시 법적 조치 고지
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#fef3c7;"><strong>지연<br>(발송)</strong></td>
+          <td>중간</td>
+          <td>높음</td>
+          <td>공연 D-1에 장비 미도착</td>
+          <td>
+            - D-3 발송 필수 정책<br>
+            - 배송 추적 링크 공유<br>
+            - 긴급 대체품 리스트
+          </td>
+          <td>
+            1. 배송 지연 즉시 알림<br>
+            2. 긴급 퀵/직접 전달<br>
+            3. 공급자 책임 시 패널티<br>
+            4. 수요자 피해 보상 (할인)
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#fef3c7;"><strong>지연<br>(반납)</strong></td>
+          <td>중간</td>
+          <td>중간</td>
+          <td>반납일 초과, 다음 예약에 영향</td>
+          <td>
+            - 반납 D-1 리마인더<br>
+            - 연체료 정책 고지<br>
+            - 버퍼 기간 설정 (1일)
+          </td>
+          <td>
+            1. 반납 지연 알림<br>
+            2. 일일 연체료 (렌탈비 10%)<br>
+            3. 다음 예약자에게 안내<br>
+            4. 3일 이상 시 분실 처리
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#fef3c7;"><strong>노쇼</strong></td>
+          <td>낮음</td>
+          <td>중간</td>
+          <td>예약 후 수령 안 함, 연락 두절</td>
+          <td>
+            - 선결제 유도 (최소 30%)<br>
+            - 예약 확정 재확인<br>
+            - 노쇼 페널티 명시
+          </td>
+          <td>
+            1. D-1 연락 시도<br>
+            2. 예약 자동 취소<br>
+            3. 위약금 차감 (30%)<br>
+            4. 블랙리스트 등록
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#c6f6d5;"><strong>클레임<br>(품질)</strong></td>
+          <td>중간</td>
+          <td>중간</td>
+          <td>상태/사이즈 불일치, 설명과 다름</td>
+          <td>
+            - 상세 사진/치수 필수<br>
+            - 실물 확인 권장<br>
+            - 상태 등급 표시 (S/A/B)
+          </td>
+          <td>
+            1. 증빙 사진 수집<br>
+            2. 공급자 소명 요청<br>
+            3. 합의 or 환불 처리<br>
+            4. 상품 정보 업데이트
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#c6f6d5;"><strong>정산 분쟁</strong></td>
+          <td>낮음</td>
+          <td>높음</td>
+          <td>수수료 오류, 파손비 이의, 정산 누락</td>
+          <td>
+            - 정산 내역 투명 공개<br>
+            - 정산 전 확인 기간 (3일)<br>
+            - 자동 정산 시스템
+          </td>
+          <td>
+            1. 거래 내역 대조<br>
+            2. 정산 이의 접수 (7일 내)<br>
+            3. 재검토 후 조정<br>
+            4. 분쟁 조정 위원회
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#e9d8fd;"><strong>권리 문제<br>(라이센스)</strong></td>
+          <td>낮음</td>
+          <td>매우 높음</td>
+          <td>저작권 침해 주장, 권리자 이의</td>
+          <td>
+            - 권리 증빙 필수<br>
+            - 권리사 직접 계약 유도<br>
+            - 면책 조항 명시
+          </td>
+          <td>
+            1. 거래 즉시 중단<br>
+            2. 법무 검토 요청<br>
+            3. 권리자와 협의<br>
+            4. 필요시 서비스 중단
+          </td>
+        </tr>
+      </table>
+
+      <h3 style="margin: 30px 0 15px;">📦 배송/픽업 옵션 및 책임 분기</h3>
+      <table>
+        <tr>
+          <th width="15%">배송 유형</th>
+          <th width="15%">비용 부담</th>
+          <th width="15%">책임 분기점</th>
+          <th width="25%">적합한 경우</th>
+          <th width="30%">주의사항</th>
+        </tr>
+        <tr>
+          <td><strong>직거래</strong><br>(수령/반납)</td>
+          <td>무료</td>
+          <td>인수 시점</td>
+          <td>같은 지역, 대형 장비, 고가 품목</td>
+          <td>인수증 서명 필수, 상태 현장 확인</td>
+        </tr>
+        <tr>
+          <td><strong>퀵서비스</strong></td>
+          <td>수요자 (기본)<br>협의 가능</td>
+          <td>수령 시점</td>
+          <td>당일 필요, 서울/수도권</td>
+          <td>배송 추적, 파손 시 퀵사 보험 확인</td>
+        </tr>
+        <tr>
+          <td><strong>택배</strong></td>
+          <td>수요자 (기본)<br>일정액 이상 무료</td>
+          <td>수령 시점</td>
+          <td>소형/의상, 전국 배송</td>
+          <td>파손 위험 품목 제외, 포장 가이드</td>
+        </tr>
+        <tr>
+          <td><strong>화물</strong></td>
+          <td>수요자</td>
+          <td>수령 시점</td>
+          <td>대형 장비, 다량 운송</td>
+          <td>사전 비용 안내, 리프트 필요 여부</td>
+        </tr>
+      </table>
+
+      <div class="highlight" style="margin-top: 20px;">
+        <strong>📌 책임 분기 원칙</strong>
+        <ul style="margin-top: 10px;">
+          <li><strong>발송 전:</strong> 공급자 책임 (상태, 포장)</li>
+          <li><strong>배송 중:</strong> 배송사 책임 (파손 시 배송사 보험)</li>
+          <li><strong>수령 후:</strong> 수요자 책임 (사용 중 파손, 분실)</li>
+          <li><strong>반납 후:</strong> 공급자 확인 후 이상 없으면 거래 종료</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ========== G. 공급자 섭외 패키지 ========== -->
+    <section class="section" id="supplier">
+      <h2 class="section-title"><span class="badge">G</span> 공급자 섭외 패키지</h2>
+
+      <h3 style="margin-bottom: 15px;">🎯 제안서 핵심 문구 10개</h3>
+      <table>
+        <tr>
+          <th width="8%">#</th>
+          <th width="30%">핵심 문구</th>
+          <th width="35%">설명/배경</th>
+          <th width="27%">사용 상황</th>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td><strong>"매출은 그대로, 고객만 늘어납니다"</strong></td>
+          <td>기존 사업 유지하면서 추가 매출 채널</td>
+          <td>첫 접촉, 제안서 헤드라인</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong>"상품 올리시면, 영업은 저희가 합니다"</strong></td>
+          <td>영업/마케팅 부담 해소</td>
+          <td>영업력 부족 업체</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><strong>"대학로 극단 200개가 찾는 플랫폼"</strong></td>
+          <td>수요자 풀 강조 (숫자는 상황에 맞게 조정)</td>
+          <td>신뢰 구축, 초기 단계</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><strong>"첫 달 수수료 40%만, 이후 50%"</strong></td>
+          <td>초기 진입 장벽 낮춤</td>
+          <td>수수료 저항 시</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><strong>"사진 촬영, 등록 다 해드립니다"</strong></td>
+          <td>온보딩 부담 제거</td>
+          <td>디지털 역량 부족 업체</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><strong>"재고 캘린더로 더블부킹 걱정 없이"</strong></td>
+          <td>운영 효율화 가치 제안</td>
+          <td>예약 관리 고민 업체</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><strong>"정산은 매월 15일, 자동으로"</strong></td>
+          <td>정산 신뢰, 현금흐름 예측 가능</td>
+          <td>정산 우려 시</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><strong>"파손/분실? 보증금과 정책으로 보호"</strong></td>
+          <td>렌탈 리스크 관리 체계</td>
+          <td>손해 우려 시</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><strong>"비수기에도 검색되고, 예약 받으세요"</strong></td>
+          <td>24시간 온라인 영업 가치</td>
+          <td>시즌성 사업체</td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td><strong>"성공하면 같이 성장, 실패해도 손해 없음"</strong></td>
+          <td>리스크 프리 제안</td>
+          <td>최종 설득, 망설일 때</td>
+        </tr>
+      </table>
+
+      <h3 style="margin: 30px 0 15px;">📧 DM/카톡/이메일 템플릿</h3>
+
+      <div class="template">
+        <h5>짧은 버전 (카톡/DM용 - 100자 이내)</h5>
+        <div class="code">
+안녕하세요, [업체명] 대표님!
+공연장비 렌탈 플랫폼 '스테이지박스'입니다.
+대표님 상품을 200개 극단에게 노출시켜 드릴 수 있어요.
+
+첫 달 수수료 40%만, 등록도 저희가 도와드려요.
+5분만 통화 가능하실까요?
+→ [캘린더 링크] 또는 [전화번호]
+        </div>
+      </div>
+
+      <div class="template">
+        <h5>긴 버전 (이메일/제안서용)</h5>
+        <div class="code">
+제목: [업체명] 대표님, 추가 매출 채널 제안드립니다 - 스테이지박스
+
+안녕하세요, [업체명] 대표님.
+
+공연장비·의상·소품 렌탈 플랫폼 '스테이지박스'를 운영하는 [담당자명]입니다.
+대학로와 공연계에서 대표님 업체가 좋은 품질의 [의상/장비]를 보유하고 계시다는 걸 알게 되어 연락드렸습니다.
+
+■ 스테이지박스란?
+- 공연 제작사, 극단, 학교가 필요한 장비/의상을 한 곳에서 검색하고 예약하는 플랫폼
+- 현재 00개 공급자, 000개 상품 등록, 월 00개 극단 방문
+
+■ 입점 혜택
+1. 추가 영업/마케팅 비용 없이 신규 고객 확보
+2. 실시간 예약 캘린더로 더블부킹 방지
+3. 자동 정산 시스템 (매월 15일)
+4. 파손/분실 정책으로 리스크 관리
+
+■ 수수료 구조
+- 거래 성사 시 50:50 (플랫폼:공급자)
+- 첫 달 한정: 40:60 (공급자 몫 60%)
+- 거래 없으면 비용 0원
+
+■ 온보딩 지원
+- 상품 사진 촬영 대행 (무료)
+- 상품 정보 등록 대행 (무료)
+- 1:1 관리자 페이지 교육
+
+짧게 통화로 설명드리면 더 이해가 빠르실 것 같습니다.
+아래 링크에서 편한 시간 선택해 주시거나, 바로 연락 주셔도 됩니다.
+
+📅 미팅 예약: [캘린더 링크]
+📞 전화: 010-XXXX-XXXX
+📧 이메일: partner@stagebox.kr
+
+감사합니다.
+스테이지박스 드림
+        </div>
+      </div>
+
+      <h3 style="margin: 30px 0 15px;">✅ 온보딩 체크리스트</h3>
+      <table>
+        <tr>
+          <th width="5%">#</th>
+          <th width="25%">단계</th>
+          <th width="35%">세부 내용</th>
+          <th width="20%">담당</th>
+          <th width="15%">소요 시간</th>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td><strong>초기 상담</strong></td>
+          <td>사업 소개, 수수료 구조 설명, 질문 응답</td>
+          <td>영업 담당</td>
+          <td>30분</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong>계약 체결</strong></td>
+          <td>입점 계약서 검토, 전자 서명</td>
+          <td>공급자 + 운영팀</td>
+          <td>1일</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><strong>계정 생성</strong></td>
+          <td>공급자 계정 생성, 권한 부여</td>
+          <td>운영팀</td>
+          <td>10분</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><strong>상품 정보 수집</strong></td>
+          <td>상품 목록 엑셀, 기존 사진 수집</td>
+          <td>공급자</td>
+          <td>1~3일</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><strong>사진 촬영 (선택)</strong></td>
+          <td>현장 방문 촬영 또는 가이드 제공</td>
+          <td>운영팀/공급자</td>
+          <td>반나절</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><strong>상품 등록</strong></td>
+          <td>일괄 업로드 또는 수동 등록</td>
+          <td>운영팀</td>
+          <td>1~2일</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><strong>관리자 교육</strong></td>
+          <td>대시보드 사용법, 예약 관리, 정산 확인</td>
+          <td>영업 담당</td>
+          <td>30분</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><strong>상품 검수/라이브</strong></td>
+          <td>상품 정보 최종 확인, 활성화</td>
+          <td>운영팀</td>
+          <td>30분</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><strong>첫 주 팔로업</strong></td>
+          <td>문의사항 확인, 노출 현황 공유</td>
+          <td>영업 담당</td>
+          <td>15분</td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td><strong>첫 거래 지원</strong></td>
+          <td>첫 예약 발생 시 밀착 지원</td>
+          <td>운영팀</td>
+          <td>수시</td>
+        </tr>
+      </table>
+
+      <h3 style="margin: 30px 0 15px;">❓ 공급자 FAQ 15개</h3>
+      <table>
+        <tr>
+          <th width="5%">#</th>
+          <th width="35%">질문</th>
+          <th width="60%">답변</th>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td><strong>수수료가 50%면 너무 높은 거 아닌가요?</strong></td>
+          <td>저희가 마케팅, 고객 확보, 결제, CS를 모두 담당합니다. 대표님은 상품만 준비하시면 됩니다. 기존 고객은 그대로 유지하시고, 저희를 통해 추가 고객만 받으시면 50%가 순수익입니다. 첫 달은 40%만 받습니다.</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><strong>기존 고객이 플랫폼으로 오면 손해 아닌가요?</strong></td>
+          <td>기존 고객은 기존 방식 그대로 하시면 됩니다. 플랫폼은 '신규 고객 채널'로만 활용하세요. 기존 고객에게는 굳이 플랫폼을 알릴 필요 없습니다.</td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><strong>정산은 언제, 어떻게 되나요?</strong></td>
+          <td>매월 1~말일 거래분을 익월 15일에 정산합니다. 정산서를 먼저 보내드리고, 확인 후 계좌이체 + 세금계산서 발행됩니다. 대시보드에서 실시간 매출도 확인 가능합니다.</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><strong>물건이 파손되면 누가 책임지나요?</strong></td>
+          <td>수요자(빌린 사람) 책임입니다. 저희 약관과 예약 과정에서 파손 시 배상 조건을 명확히 고지합니다. 고가 품목은 보증금을 미리 받고, 파손 시 차감 후 정산합니다.</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><strong>상품 등록이 어렵지 않나요?</strong></td>
+          <td>저희가 다 해드립니다. 엑셀로 목록만 주시면 일괄 등록하고, 원하시면 방문 촬영도 무료로 해드립니다. 이후 수정은 관리자 페이지에서 쉽게 가능합니다.</td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><strong>예약이 겹치면 어떻게 하나요?</strong></td>
+          <td>저희 시스템이 자동으로 재고/기간 체크합니다. 이미 예약된 기간은 다른 사람이 예약할 수 없어요. 더블부킹 걱정 없습니다.</td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><strong>거래가 없으면 비용이 드나요?</strong></td>
+          <td>아니요, 거래 성사 시에만 수수료가 발생합니다. 입점비, 월회비, 광고비 전부 없습니다. 리스크 제로입니다.</td>
+        </tr>
+        <tr>
+          <td>8</td>
+          <td><strong>배송은 누가 하나요?</strong></td>
+          <td>배송은 기본적으로 수요자가 선택/부담합니다. 직거래, 퀵, 택배, 화물 옵션 중 선택하고, 비용도 수요자가 냅니다. 대표님은 포장만 해주시면 됩니다.</td>
+        </tr>
+        <tr>
+          <td>9</td>
+          <td><strong>가격은 제가 정하나요?</strong></td>
+          <td>네, 100% 대표님이 정합니다. 일일/주간/월간 가격, 세트 할인 등 자유롭게 설정 가능합니다. 시장 가격 참고 데이터도 제공해 드릴 수 있어요.</td>
+        </tr>
+        <tr>
+          <td>10</td>
+          <td><strong>언제든 그만둘 수 있나요?</strong></td>
+          <td>네, 계약 해지는 30일 전 통보로 가능합니다. 진행 중인 예약만 완료되면 위약금 없이 해지됩니다.</td>
+        </tr>
+        <tr>
+          <td>11</td>
+          <td><strong>다른 플랫폼에도 등록해도 되나요?</strong></td>
+          <td>네, 독점 계약 아닙니다. 다만 재고/일정 관리를 위해 예약 현황을 저희와 동기화해 주셔야 합니다.</td>
+        </tr>
+        <tr>
+          <td>12</td>
+          <td><strong>고객 응대는 누가 하나요?</strong></td>
+          <td>기본 문의는 저희 CS팀이 1차 대응합니다. 상품 상세 문의나 특수 요청은 대표님께 연결해 드립니다.</td>
+        </tr>
+        <tr>
+          <td>13</td>
+          <td><strong>계약서가 복잡하지 않나요?</strong></td>
+          <td>2페이지 분량의 간단한 계약서입니다. 핵심은 수수료율, 정산 주기, 책임 범위 3가지뿐이에요. 전자 서명으로 5분이면 완료됩니다.</td>
+        </tr>
+        <tr>
+          <td>14</td>
+          <td><strong>어떤 상품을 올려야 하나요?</strong></td>
+          <td>대표님이 렌탈 가능한 모든 상품이요. 의상, 소품, 장비 다 됩니다. 수요가 많은 품목(시대별 의상, 무대 조명, 가구 등) 위주로 먼저 올리시는 것도 좋습니다.</td>
+        </tr>
+        <tr>
+          <td>15</td>
+          <td><strong>지금 바로 시작해야 하나요?</strong></td>
+          <td>지금 입점하시면 첫 달 수수료 40% 혜택과 무료 촬영 서비스를 드립니다. 2월 공연 시즌 전에 등록하시면 노출 효과가 더 좋습니다.</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- ========== H. 카테고리/상품 데이터 구조 ========== -->
+    <section class="section" id="data">
+      <h2 class="section-title"><span class="badge">H</span> 카테고리/상품 데이터 구조</h2>
+
+      <h3 style="margin-bottom: 15px;">📂 카테고리 계층 구조</h3>
+      <div class="code">
+categories/
+├── costumes/           # 의상
+│   ├── historical/     # 시대별
+│   │   ├── joseon      # 조선시대
+│   │   ├── victorian   # 빅토리아 시대
+│   │   ├── 1920s       # 1920년대
+│   │   └── medieval    # 중세
+│   ├── genre/          # 장르별
+│   │   ├── musical     # 뮤지컬
+│   │   ├── dance       # 무용
+│   │   ├── opera       # 오페라
+│   │   └── traditional # 전통극
+│   └── type/           # 종류별
+│       ├── dress       # 드레스
+│       ├── suit        # 정장
+│       ├── hanbok      # 한복
+│       └── uniform     # 유니폼
+├── props/              # 소품
+│   ├── furniture       # 가구
+│   ├── decoration      # 장식품
+│   ├── hand-props      # 핸드프롭
+│   └── set-pieces      # 세트피스
+├── equipment/          # 장비
+│   ├── lighting        # 조명
+│   ├── sound           # 음향
+│   ├── stage           # 무대장치
+│   └── special-effects # 특수효과
+└── accessories/        # 액세서리
+    ├── wigs            # 가발
+    ├── hats            # 모자
+    ├── jewelry         # 장신구
+    └── shoes           # 신발
+      </div>
+
+      <h3 style="margin: 30px 0 15px;">📋 상품 데이터 스키마 (필수 필드)</h3>
+      <table>
+        <tr>
+          <th width="15%">필드명</th>
+          <th width="10%">타입</th>
+          <th width="8%">필수</th>
+          <th width="35%">설명</th>
+          <th width="32%">예시</th>
+        </tr>
+        <tr style="background:#f0fff4;">
+          <td colspan="5"><strong>기본 정보</strong></td>
+        </tr>
+        <tr>
+          <td>id</td>
+          <td>string</td>
+          <td>✓</td>
+          <td>상품 고유 ID (자동 생성)</td>
+          <td>prod_abc123xyz</td>
+        </tr>
+        <tr>
+          <td>supplierId</td>
+          <td>string</td>
+          <td>✓</td>
+          <td>공급자 ID</td>
+          <td>sup_xyz789</td>
+        </tr>
+        <tr>
+          <td>name</td>
+          <td>string</td>
+          <td>✓</td>
+          <td>상품명 (최대 100자)</td>
+          <td>빅토리아 시대 볼가운 (빨강)</td>
+        </tr>
+        <tr>
+          <td>description</td>
+          <td>string</td>
+          <td>✓</td>
+          <td>상세 설명 (최대 2000자)</td>
+          <td>19세기 빅토리아 시대 스타일...</td>
+        </tr>
+        <tr>
+          <td>categoryId</td>
+          <td>string</td>
+          <td>✓</td>
+          <td>카테고리 ID (최하위)</td>
+          <td>costumes/historical/victorian</td>
+        </tr>
+        <tr>
+          <td>tags</td>
+          <td>array</td>
+          <td></td>
+          <td>검색용 태그 (최대 10개)</td>
+          <td>["빅토리아", "드레스", "빨강", "여성"]</td>
+        </tr>
+        <tr style="background:#faf5ff;">
+          <td colspan="5"><strong>가격 정보</strong></td>
+        </tr>
+        <tr>
+          <td>priceDaily</td>
+          <td>number</td>
+          <td>✓</td>
+          <td>1일 렌탈 가격 (원)</td>
+          <td>50000</td>
+        </tr>
+        <tr>
+          <td>priceWeekly</td>
+          <td>number</td>
+          <td></td>
+          <td>7일 렌탈 가격 (할인)</td>
+          <td>250000</td>
+        </tr>
+        <tr>
+          <td>priceMonthly</td>
+          <td>number</td>
+          <td></td>
+          <td>30일 렌탈 가격 (할인)</td>
+          <td>800000</td>
+        </tr>
+        <tr>
+          <td>deposit</td>
+          <td>number</td>
+          <td></td>
+          <td>보증금 (0이면 없음)</td>
+          <td>100000</td>
+        </tr>
+        <tr style="background:#fffaf0;">
+          <td colspan="5"><strong>재고/수량</strong></td>
+        </tr>
+        <tr>
+          <td>quantity</td>
+          <td>number</td>
+          <td>✓</td>
+          <td>보유 수량</td>
+          <td>3</td>
+        </tr>
+        <tr>
+          <td>minRentalDays</td>
+          <td>number</td>
+          <td>✓</td>
+          <td>최소 렌탈 기간 (일)</td>
+          <td>1</td>
+        </tr>
+        <tr>
+          <td>maxRentalDays</td>
+          <td>number</td>
+          <td></td>
+          <td>최대 렌탈 기간 (일)</td>
+          <td>90</td>
+        </tr>
+        <tr>
+          <td>bufferDays</td>
+          <td>number</td>
+          <td></td>
+          <td>예약 간 버퍼 (정비/세탁)</td>
+          <td>1</td>
+        </tr>
+        <tr style="background:#fed7d7;">
+          <td colspan="5"><strong>의상 전용 (category=costumes인 경우)</strong></td>
+        </tr>
+        <tr>
+          <td>size</td>
+          <td>string</td>
+          <td>△</td>
+          <td>사이즈 (XS~4XL 또는 프리)</td>
+          <td>M</td>
+        </tr>
+        <tr>
+          <td>measurements</td>
+          <td>object</td>
+          <td></td>
+          <td>상세 치수 (cm)</td>
+          <td>{chest: 88, waist: 70, length: 140}</td>
+        </tr>
+        <tr>
+          <td>material</td>
+          <td>string</td>
+          <td></td>
+          <td>소재</td>
+          <td>폴리에스터, 새틴</td>
+        </tr>
+        <tr>
+          <td>color</td>
+          <td>string</td>
+          <td></td>
+          <td>색상</td>
+          <td>빨강</td>
+        </tr>
+        <tr>
+          <td>era</td>
+          <td>string</td>
+          <td></td>
+          <td>시대 구분</td>
+          <td>19세기</td>
+        </tr>
+        <tr style="background:#e9d8fd;">
+          <td colspan="5"><strong>장비 전용 (category=equipment인 경우)</strong></td>
+        </tr>
+        <tr>
+          <td>brand</td>
+          <td>string</td>
+          <td></td>
+          <td>제조사/브랜드</td>
+          <td>ETC</td>
+        </tr>
+        <tr>
+          <td>model</td>
+          <td>string</td>
+          <td></td>
+          <td>모델명</td>
+          <td>Source Four LED Series 2</td>
+        </tr>
+        <tr>
+          <td>specs</td>
+          <td>object</td>
+          <td></td>
+          <td>사양 (전력, 무게 등)</td>
+          <td>{power: "170W", weight: "7.9kg"}</td>
+        </tr>
+        <tr>
+          <td>accessories</td>
+          <td>array</td>
+          <td></td>
+          <td>포함 액세서리</td>
+          <td>["케이블", "클램프", "컬러필터"]</td>
+        </tr>
+        <tr style="background:#c6f6d5;">
+          <td colspan="5"><strong>이미지/미디어</strong></td>
+        </tr>
+        <tr>
+          <td>images</td>
+          <td>array</td>
+          <td>✓</td>
+          <td>이미지 URL (최소 1개, 최대 10개)</td>
+          <td>["https://...", "https://..."]</td>
+        </tr>
+        <tr>
+          <td>thumbnail</td>
+          <td>string</td>
+          <td>✓</td>
+          <td>대표 이미지 URL</td>
+          <td>https://storage.../thumb.jpg</td>
+        </tr>
+        <tr>
+          <td>videos</td>
+          <td>array</td>
+          <td></td>
+          <td>영상 URL</td>
+          <td>["https://youtube.com/..."]</td>
+        </tr>
+        <tr style="background:#f7fafc;">
+          <td colspan="5"><strong>상태/관리</strong></td>
+        </tr>
+        <tr>
+          <td>condition</td>
+          <td>string</td>
+          <td>✓</td>
+          <td>상태 등급 (S/A/B/C)</td>
+          <td>A</td>
+        </tr>
+        <tr>
+          <td>status</td>
+          <td>string</td>
+          <td>✓</td>
+          <td>상품 상태 (active/inactive/pending)</td>
+          <td>active</td>
+        </tr>
+        <tr>
+          <td>deliveryOptions</td>
+          <td>array</td>
+          <td>✓</td>
+          <td>가능한 배송 옵션</td>
+          <td>["pickup", "quick", "courier"]</td>
+        </tr>
+        <tr>
+          <td>location</td>
+          <td>string</td>
+          <td>✓</td>
+          <td>보관 위치 (지역)</td>
+          <td>서울 종로구</td>
+        </tr>
+        <tr>
+          <td>createdAt</td>
+          <td>timestamp</td>
+          <td>✓</td>
+          <td>등록일시</td>
+          <td>2026-02-08T10:00:00Z</td>
+        </tr>
+        <tr>
+          <td>updatedAt</td>
+          <td>timestamp</td>
+          <td>✓</td>
+          <td>수정일시</td>
+          <td>2026-02-08T15:30:00Z</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- ========== I. 예약 캘린더/재고 관리 ========== -->
+    <section class="section" id="calendar">
+      <h2 class="section-title"><span class="badge">I</span> 예약 캘린더 / 재고 관리 로직</h2>
+
+      <h3 style="margin-bottom: 15px;">📅 예약 상태 흐름</h3>
+      <div class="code">
+예약 상태 (Reservation Status):
+
+[요청] ──▶ [확정] ──▶ [발송] ──▶ [사용중] ──▶ [반납] ──▶ [완료]
+ │           │          │           │          │          │
+ │           │          │           │          │          └─▶ 리뷰 요청
+ │           │          │           │          │
+ │           │          │           │          └─▶ 지연 시 [연체]
+ │           │          │           │
+ │           │          │           └─▶ 파손/분실 시 [클레임]
+ │           │          │
+ │           │          └─▶ 미발송 시 [발송지연]
+ │           │
+ │           └─▶ 거절 시 [취소]
+ │
+ └─▶ 취소 시 [취소]
+
+
+상태 코드:
+- PENDING    : 요청 (결제 대기 또는 승인 대기)
+- CONFIRMED  : 확정 (결제 완료, 공급자 승인)
+- SHIPPED    : 발송 (배송 중)
+- IN_USE     : 사용중 (수령 완료)
+- RETURNED   : 반납 (반납 배송 중 또는 직접 반납)
+- COMPLETED  : 완료 (공급자 확인 완료)
+- CANCELLED  : 취소
+- OVERDUE    : 연체 (반납일 초과)
+- CLAIMED    : 클레임 (파손/분실/분쟁)
+      </div>
+
+      <h3 style="margin: 30px 0 15px;">🔒 재고 충돌 방지 규칙</h3>
+      <table>
+        <tr>
+          <th width="20%">규칙</th>
+          <th width="40%">설명</th>
+          <th width="40%">구현 방식</th>
+        </tr>
+        <tr>
+          <td><strong>1. 수량 체크</strong></td>
+          <td>예약 요청 시 해당 기간에 가용 수량 확인</td>
+          <td>
+            <code>availableQty = totalQty - reservedQty(period)</code><br>
+            availableQty >= requestQty 이어야 예약 가능
+          </td>
+        </tr>
+        <tr>
+          <td><strong>2. 버퍼 기간</strong></td>
+          <td>예약 간 정비/세탁을 위한 버퍼</td>
+          <td>
+            예약 종료일 + bufferDays 이후부터 다음 예약 가능<br>
+            예: bufferDays=1이면 2/10 반납 → 2/12부터 가능
+          </td>
+        </tr>
+        <tr>
+          <td><strong>3. 동시 요청 처리</strong></td>
+          <td>같은 시간에 동일 상품 요청 시</td>
+          <td>
+            Firestore Transaction 사용<br>
+            먼저 commit된 요청만 성공<br>
+            실패 시 "이미 예약됨" 안내
+          </td>
+        </tr>
+        <tr>
+          <td><strong>4. 예약 잠금</strong></td>
+          <td>결제 진행 중 임시 잠금</td>
+          <td>
+            결제 시작 시 15분간 임시 예약(PENDING)<br>
+            결제 미완료 시 자동 해제<br>
+            임시 예약도 수량에서 차감
+          </td>
+        </tr>
+        <tr>
+          <td><strong>5. 연체 처리</strong></td>
+          <td>반납 지연 시 다음 예약 보호</td>
+          <td>
+            반납일 D+1 알림<br>
+            D+3까지 미반납 시 다음 예약자에게 공지<br>
+            D+3 초과 시 분실 처리 고려
+          </td>
+        </tr>
+      </table>
+
+      <h3 style="margin: 30px 0 15px;">📊 가용성 계산 로직</h3>
+      <div class="code">
+// 특정 기간의 가용 수량 계산
+function getAvailableQuantity(productId, startDate, endDate) {
+  const product = getProduct(productId);
+  const totalQty = product.quantity;
+  const bufferDays = product.bufferDays || 0;
+
+  // 해당 기간과 겹치는 예약 조회
+  const overlappingReservations = getReservations({
+    productId: productId,
+    status: ['PENDING', 'CONFIRMED', 'SHIPPED', 'IN_USE'],
+    // 예약 기간 + 버퍼가 요청 기간과 겹치는지
+    dateRange: {
+      start: addDays(startDate, -bufferDays),
+      end: addDays(endDate, bufferDays)
+    }
+  });
+
+  // 겹치는 각 날짜별로 예약된 수량 계산
+  const reservedByDate = {};
+  for (const rsv of overlappingReservations) {
+    const effectiveStart = rsv.startDate;
+    const effectiveEnd = addDays(rsv.endDate, bufferDays);
+
+    for (let d = effectiveStart; d <= effectiveEnd; d = addDays(d, 1)) {
+      reservedByDate[d] = (reservedByDate[d] || 0) + rsv.quantity;
+    }
+  }
+
+  // 요청 기간 중 최대 예약 수량 찾기
+  let maxReserved = 0;
+  for (let d = startDate; d <= endDate; d = addDays(d, 1)) {
+    maxReserved = Math.max(maxReserved, reservedByDate[d] || 0);
+  }
+
+  return totalQty - maxReserved;
+}
+
+// 예약 가능 여부 확인
+function canReserve(productId, startDate, endDate, requestQty) {
+  const available = getAvailableQuantity(productId, startDate, endDate);
+  return available >= requestQty;
+}
+      </div>
+
+      <h3 style="margin: 30px 0 15px;">📆 캘린더 뷰 데이터 구조</h3>
+      <div class="code">
+// 상품별 월간 캘린더 데이터
+{
+  productId: "prod_abc123",
+  month: "2026-02",
+  totalQuantity: 3,
+  days: {
+    "2026-02-01": { reserved: 0, available: 3, status: "open" },
+    "2026-02-02": { reserved: 1, available: 2, status: "partial" },
+    "2026-02-03": { reserved: 1, available: 2, status: "partial" },
+    "2026-02-04": { reserved: 3, available: 0, status: "full" },
+    "2026-02-05": { reserved: 3, available: 0, status: "full" },
+    "2026-02-06": { reserved: 0, available: 3, status: "buffer" }, // 버퍼 기간
+    // ...
+  },
+  reservations: [
+    {
+      id: "rsv_001",
+      startDate: "2026-02-02",
+      endDate: "2026-02-05",
+      quantity: 1,
+      customerName: "김극장",
+      status: "CONFIRMED"
+    },
+    {
+      id: "rsv_002",
+      startDate: "2026-02-04",
+      endDate: "2026-02-05",
+      quantity: 2,
+      customerName: "대학로극단",
+      status: "CONFIRMED"
+    }
+  ]
+}
+
+// 캘린더 상태 색상
+status colors:
+- open: 녹색 (전량 가용)
+- partial: 노랑 (일부 가용)
+- full: 빨강 (품절)
+- buffer: 회색 (버퍼 기간)
+      </div>
+    </section>
+
+    <!-- ========== J. 정산 로직 ========== -->
+    <section class="section" id="settlement">
+      <h2 class="section-title"><span class="badge">J</span> 정산 로직</h2>
+
+      <h3 style="margin-bottom: 15px;">💰 정산 흐름 다이어그램</h3>
+      <div class="code">
+[거래 발생] ──▶ [거래 완료] ──▶ [정산 집계] ──▶ [정산서 발송] ──▶ [확인/이의] ──▶ [입금]
+                    │               │                │                │
+                    │               │                │                ├─ 이의 없음: 입금 처리
+                    │               │                │                └─ 이의 있음: 재검토
+                    │               │                │
+                    │               │                └─ 매월 10일 자동 발송
+                    │               │
+                    │               └─ 매월 1일 전월 거래 집계
+                    │
+                    └─ 반납 확인 완료 = 거래 완료
+
+
+정산 일정:
+- 정산 기간: 매월 1일 ~ 말일
+- 정산서 발송: 익월 10일
+- 확인/이의 기간: 익월 10일 ~ 13일 (3일)
+- 입금일: 익월 15일 (영업일 기준)
+      </div>
+
+      <h3 style="margin: 30px 0 15px;">📊 정산 계산 공식</h3>
+      <table>
+        <tr>
+          <th width="20%">항목</th>
+          <th width="35%">계산식</th>
+          <th width="25%">예시</th>
+          <th width="20%">비고</th>
+        </tr>
+        <tr>
+          <td><strong>총 거래액</strong></td>
+          <td>렌탈비 + 배송비</td>
+          <td>100,000 + 5,000 = 105,000원</td>
+          <td>VAT 포함</td>
+        </tr>
+        <tr>
+          <td><strong>플랫폼 수수료</strong></td>
+          <td>렌탈비 × 수수료율 (50%)</td>
+          <td>100,000 × 50% = 50,000원</td>
+          <td>렌탈비만 기준</td>
+        </tr>
+        <tr>
+          <td><strong>공급자 정산액</strong></td>
+          <td>렌탈비 - 수수료 + 배송비</td>
+          <td>100,000 - 50,000 + 5,000 = 55,000원</td>
+          <td>배송비는 전액 전달</td>
+        </tr>
+        <tr>
+          <td><strong>환불 차감</strong></td>
+          <td>환불금 × 환불 정책</td>
+          <td>100% 환불: -55,000원</td>
+          <td>수수료도 환불</td>
+        </tr>
+        <tr>
+          <td><strong>파손비 추가</strong></td>
+          <td>파손비 × (1 - 수수료율)</td>
+          <td>20,000 × 50% = 10,000원</td>
+          <td>파손비도 수수료</td>
+        </tr>
+        <tr>
+          <td><strong>연체료 추가</strong></td>
+          <td>연체료 × (1 - 수수료율)</td>
+          <td>10,000 × 50% = 5,000원</td>
+          <td>연체료도 수수료</td>
+        </tr>
+        <tr style="background:#faf5ff;">
+          <td><strong>최종 정산액</strong></td>
+          <td>기본 정산 - 환불 + 파손비 + 연체료</td>
+          <td>55,000 - 0 + 10,000 + 5,000 = 70,000원</td>
+          <td></td>
+        </tr>
+      </table>
+
+      <h3 style="margin: 30px 0 15px;">🔄 환불/취소 정책</h3>
+      <table>
+        <tr>
+          <th width="20%">취소 시점</th>
+          <th width="20%">환불율</th>
+          <th width="30%">처리 방식</th>
+          <th width="30%">비고</th>
+        </tr>
+        <tr>
+          <td>D-7 이전</td>
+          <td>100%</td>
+          <td>전액 환불, 공급자 정산 제외</td>
+          <td>수수료도 환불</td>
+        </tr>
+        <tr>
+          <td>D-7 ~ D-3</td>
+          <td>70%</td>
+          <td>30% 위약금 공급자 전달 (수수료 적용)</td>
+          <td>위약금 15%는 공급자</td>
+        </tr>
+        <tr>
+          <td>D-3 ~ D-1</td>
+          <td>50%</td>
+          <td>50% 위약금 공급자 전달 (수수료 적용)</td>
+          <td>위약금 25%는 공급자</td>
+        </tr>
+        <tr>
+          <td>당일 (D-Day)</td>
+          <td>0%</td>
+          <td>전액 위약금, 정상 정산</td>
+          <td>공급자 50% 수령</td>
+        </tr>
+        <tr style="background:#fed7d7;">
+          <td>노쇼</td>
+          <td>0%</td>
+          <td>전액 위약금, 정상 정산</td>
+          <td>블랙리스트 등록</td>
+        </tr>
+      </table>
+
+      <h3 style="margin: 30px 0 15px;">⚠️ 파손/분실 처리 흐름</h3>
+      <div class="code">
+[반납] ──▶ [공급자 검수] ──▶ [이상 발견] ──▶ [클레임 접수] ──▶ [증빙 수집] ──▶ [금액 산정] ──▶ [청구]
+                │                                  │                │
+                │                                  │                ├─ 수선비: 견적서 기준
+                │                                  │                ├─ 대체비: 시가 기준
+                │                                  │                └─ 분실: 시가 100%
+                │                                  │
+                │                                  └─ 반납 후 24시간 내 접수
+                │
+                └─ 이상 없음 → [완료]
+
+
+청구 처리:
+1. 보증금 있는 경우: 보증금에서 차감 후 잔액 환불
+2. 보증금 없는 경우: 수요자에게 추가 결제 요청
+3. 미결제 시: 법적 조치 안내 + 블랙리스트
+
+정산 반영:
+- 파손비/분실비 수금 완료 시 익월 정산에 포함
+- 파손비에도 수수료 50% 적용
+      </div>
+
+      <h3 style="margin: 30px 0 15px;">📄 정산서 샘플 구조</h3>
+      <div class="template">
+        <h5>월간 정산서</h5>
+        <div class="code">
+==========================================
+         스테이지박스 정산서
+==========================================
+공급자: 홍길동 의상실
+정산 기간: 2026년 2월 1일 ~ 2월 28일
+발행일: 2026년 3월 10일
+입금 예정일: 2026년 3월 15일
+------------------------------------------
+
+[거래 내역]
+No.  주문번호      상품명              렌탈비    배송비    상태
+1    ORD-001      빅토리아 드레스      50,000    5,000    완료
+2    ORD-002      조선시대 한복        80,000    0        완료
+3    ORD-003      중세 갑옷 세트      120,000   10,000   완료
+4    ORD-004      1920년대 정장        30,000    3,000    환불(70%)
+------------------------------------------
+                  소계                280,000   18,000
+
+[공제 내역]
+- 플랫폼 수수료 (50%): -140,000원
+- 환불 처리 (ORD-004): -30,000원 × 70% = -21,000원
+  → 위약금 공급자 몫: +4,500원 (30% × 50%)
+
+[추가 내역]
+- 파손비 (ORD-002): +15,000원 (공급자 몫 50%)
+- 연체료 (ORD-003): +6,000원 (공급자 몫 50%)
+
+------------------------------------------
+[정산 요약]
+총 렌탈비: 280,000원
+(-) 수수료: 140,000원
+(-) 환불 차감: 21,000원
+(+) 위약금: 4,500원
+(+) 파손비: 15,000원
+(+) 연체료: 6,000원
+(+) 배송비: 18,000원 (환불분 3,000원 제외 = 15,000원)
+------------------------------------------
+최종 정산액: 159,500원
+==========================================
+
+입금 계좌: 신한은행 110-XXX-XXXXXX (홍길동)
+
+문의: settlement@stagebox.kr
+        </div>
+      </div>
+
+      <h3 style="margin: 30px 0 15px;">⚙️ 정산 자동화 로직</h3>
+      <div class="code">
+// 월간 정산 자동화 스케줄
+Schedule: 매월 1일 09:00 KST
+
+async function generateMonthlySettlements() {
+  const lastMonth = getPreviousMonth();
+  const suppliers = await getAllActiveSuppliers();
+
+  for (const supplier of suppliers) {
+    // 1. 해당 공급자의 전월 완료 거래 조회
+    const transactions = await getCompletedTransactions({
+      supplierId: supplier.id,
+      completedAt: { $gte: lastMonth.start, $lte: lastMonth.end }
+    });
+
+    // 2. 정산 금액 계산
+    let totalRental = 0;
+    let totalDelivery = 0;
+    let totalCommission = 0;
+    let totalRefund = 0;
+    let totalPenalty = 0;
+    let totalDamage = 0;
+    let totalOverdue = 0;
+
+    for (const tx of transactions) {
+      totalRental += tx.rentalAmount;
+      totalDelivery += tx.deliveryFee;
+      totalCommission += tx.rentalAmount * tx.commissionRate;
+      totalRefund += tx.refundAmount || 0;
+      totalPenalty += (tx.penaltyAmount || 0) * (1 - tx.commissionRate);
+      totalDamage += (tx.damageAmount || 0) * (1 - tx.commissionRate);
+      totalOverdue += (tx.overdueAmount || 0) * (1 - tx.commissionRate);
+    }
+
+    const settlementAmount =
+      totalRental - totalCommission - totalRefund +
+      totalPenalty + totalDamage + totalOverdue + totalDelivery;
+
+    // 3. 정산서 생성
+    const settlement = await createSettlement({
+      supplierId: supplier.id,
+      period: lastMonth,
+      transactions: transactions.map(t => t.id),
+      breakdown: {
+        totalRental, totalDelivery, totalCommission,
+        totalRefund, totalPenalty, totalDamage, totalOverdue
+      },
+      amount: settlementAmount,
+      status: 'PENDING_REVIEW',
+      bankAccount: supplier.bankAccount,
+      dueDate: getSettlementDueDate() // 익월 15일
+    });
+
+    // 4. 정산서 이메일 발송 (10일에 발송)
+    await scheduleEmail({
+      to: supplier.email,
+      template: 'settlement-statement',
+      data: settlement,
+      sendAt: getSettlementEmailDate() // 익월 10일
+    });
+  }
+}
+
+// 정산 확정 (15일 자동 실행)
+async function finalizeSettlements() {
+  const pendingSettlements = await getSettlements({
+    status: 'PENDING_REVIEW',
+    dueDate: today()
+  });
+
+  for (const settlement of pendingSettlements) {
+    // 이의 제기 없으면 확정
+    if (!settlement.hasDispute) {
+      await updateSettlement(settlement.id, { status: 'CONFIRMED' });
+      await initiateTransfer(settlement); // 입금 처리
+      await issueInvoice(settlement); // 세금계산서 발행
+    }
+  }
+}
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="text-align: center; padding: 40px 20px; color: #718096; font-size: 14px;">
+      <p><strong>StageBox 90일 실행 계획</strong></p>
+      <p>작성일: 2026년 2월 | Version 1.0</p>
+      <p style="margin-top: 10px;">이 문서는 실행 가이드로, 상황에 따라 유연하게 조정하시기 바랍니다.</p>
+    </footer>
+  </div>
+</body>
+</html>

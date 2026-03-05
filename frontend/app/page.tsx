@@ -184,15 +184,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Floating Cart Button */}
-      <Link href="/cart" className="fixed bottom-4 right-4 md:bottom-8 md:right-8 w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-violet-500 to-pink-500 text-white rounded-full shadow-2xl hover:scale-110 transition-transform flex items-center justify-center group">
-        <div className="relative">
-          <ShoppingCart className="w-6 h-6 md:w-7 md:h-7" />
-          <span className="absolute -top-2 -right-2 w-5 h-5 bg-pink-500 text-white text-xs rounded-full flex items-center justify-center">
-            0
-          </span>
-        </div>
-      </Link>
     </div>
   );
 }

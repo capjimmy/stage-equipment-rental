@@ -59,8 +59,16 @@ export default function RegisterPage() {
       // 메인 페이지로 이동
       setTimeout(() => router.push('/'), 1000);
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      showError(error.response?.data?.message || '회원가입에 실패했습니다.');
+      const firebaseError = err as { code?: string; message?: string };
+      const errorMessages: Record<string, string> = {
+        'auth/email-already-in-use': '이미 사용 중인 이메일입니다.',
+        'auth/weak-password': '비밀번호는 6자 이상이어야 합니다.',
+        'auth/invalid-email': '유효하지 않은 이메일 형식입니다.',
+        'auth/operation-not-allowed': '이메일/비밀번호 로그인이 비활성화되어 있습니다. Firebase Console에서 활성화해주세요.',
+      };
+      const msg = errorMessages[firebaseError.code || ''] || firebaseError.message || '회원가입에 실패했습니다.';
+      console.error('회원가입 에러:', firebaseError.code, firebaseError.message);
+      showError(msg);
     } finally {
       setLoading(false);
     }
