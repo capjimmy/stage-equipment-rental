@@ -8,10 +8,12 @@ import { cartApi } from '@/lib/api';
 import Loading from '@/components/Loading';
 import { useToast } from '@/hooks/useToast';
 import { CartItem } from '@/types';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function CartPage() {
   const router = useRouter();
   const { success, error: showError, info, ToastContainer } = useToast();
+  const queryClient = useQueryClient();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,6 +48,7 @@ export default function CartPage() {
           item.id === id ? { ...item, quantity: newQuantity } : item
         )
       );
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
       success('수량이 변경되었습니다.');
     } catch (error) {
       console.error('Failed to update quantity:', error);
@@ -58,6 +61,7 @@ export default function CartPage() {
       try {
         await cartApi.removeItem(id);
         setCartItems(items => items.filter(item => item.id !== id));
+        queryClient.invalidateQueries({ queryKey: ['cart'] });
         success('상품이 장바구니에서 제거되었습니다.');
       } catch (error) {
         console.error('Failed to remove item:', error);
