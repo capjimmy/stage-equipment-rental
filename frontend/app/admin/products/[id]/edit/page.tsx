@@ -258,6 +258,7 @@ export default function EditProductPage() {
         images: formData.images,
         detailImages: formData.detailImages,
         status: formData.status as 'active' | 'inactive',
+        tagIds: formData.tags,
       });
 
       setToast({ message: '상품이 성공적으로 수정되었습니다.', type: 'success' });

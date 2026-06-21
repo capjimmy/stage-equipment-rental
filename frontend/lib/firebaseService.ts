@@ -184,6 +184,17 @@ export const productApi = {
       );
     }
 
+    // When a rental period is given, compute real per-product availability for those dates
+    if (params.startDate && params.endDate) {
+      const counts = await Promise.all(
+        products.map(p => adminApi.getAvailableAssetCount(p.id, params.startDate!, params.endDate!))
+      );
+      products.forEach((p, i) => {
+        p.availableCount = counts[i];
+        p.isAvailable = counts[i] > 0;
+      });
+    }
+
     // Filter out unavailable products unless includeUnavailable is true
     if (!params.includeUnavailable) {
       products = products.filter(p => p.availableCount === undefined || p.availableCount > 0);
@@ -218,6 +229,7 @@ export const productApi = {
     }
     product.tags = tagsSnapshot.docs.map(d => convertDoc<Tag>(d));
     product.assets = assetsSnapshot.docs.map(d => convertDoc<Asset>(d));
+    product.availableCount = product.assets.filter(a => a.status === 'available').length;
 
     return product;
   },
@@ -556,6 +568,7 @@ export const orderApi = {
     deliveryMethod: string;
     shippingAddress: string;
     deliveryNotes?: string;
+    deliveryFee?: number;
   }): Promise<Order> => {
     const cart = await cartApi.getCart();
     const user = auth.currentUser;
@@ -564,31 +577,44 @@ export const orderApi = {
       throw new Error('User not authenticated');
     }
 
+    const rentalDays = (start: string, end: string) => {
+      const diff = (new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24);
+      return Math.max(1, Math.ceil(diff) + 1);
+    };
+
+    // Keep each item's own rental dates so per-item periods aren't lost
+    const items = cart.items.map(item => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      pricePerDay: item.product?.baseDailyPrice || '0',
+      startDate: item.startDate || data.startDate,
+      endDate: item.endDate || data.endDate,
+    }));
+
+    // Order-level window spans every item (min start … max end), not just item[0]
+    const starts = items.map(i => i.startDate).filter(Boolean);
+    const ends = items.map(i => i.endDate).filter(Boolean);
+    const orderStart = starts.length ? starts.reduce((a, b) => (a < b ? a : b)) : data.startDate;
+    const orderEnd = ends.length ? ends.reduce((a, b) => (a > b ? a : b)) : data.endDate;
+
+    const itemsTotal = items.reduce((sum, item) => {
+      const price = parseFloat(String(item.pricePerDay || '0'));
+      return sum + price * item.quantity * rentalDays(item.startDate, item.endDate);
+    }, 0);
+    const deliveryFee = data.deliveryFee || 0;
+
     const ordersRef = collection(db, 'orders');
     const orderData = {
       userId: user.uid,
-      items: cart.items.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        pricePerDay: item.product?.baseDailyPrice || '0',
-      })),
-      startDate: data.startDate,
-      endDate: data.endDate,
+      items,
+      startDate: orderStart,
+      endDate: orderEnd,
       deliveryMethod: data.deliveryMethod,
       shippingAddress: data.shippingAddress,
       deliveryNotes: data.deliveryNotes || null,
+      deliveryFee,
       status: 'requested',
-      totalPrice: cart.items.reduce((sum, item) => {
-        // Use item's individual dates, falling back to order dates
-        const itemStartDate = item.startDate || data.startDate;
-        const itemEndDate = item.endDate || data.endDate;
-        const startMs = new Date(itemStartDate).getTime();
-        const endMs = new Date(itemEndDate).getTime();
-        const diffDays = (endMs - startMs) / (1000 * 60 * 60 * 24);
-        const days = Math.max(1, Math.ceil(diffDays) + 1);
-        const price = parseFloat(String(item.product?.baseDailyPrice || '0'));
-        return sum + (price * item.quantity * days);
-      }, 0),
+      totalPrice: itemsTotal + deliveryFee,
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     };
@@ -738,12 +764,33 @@ export const adminApi = {
     return convertDoc<Product>(newDoc);
   },
 
-  updateProduct: async (id: string, data: Partial<Product>): Promise<Product> => {
+  updateProduct: async (id: string, data: Partial<Product> & { tagIds?: string[] }): Promise<Product> => {
     const docRef = doc(db, 'products', id);
-    await updateDoc(docRef, {
-      ...data,
-      updatedAt: Timestamp.now(),
-    });
+    // tagIds / tags are not plain doc fields — handle separately, don't write them onto the product doc
+    const { tagIds, tags, ...rest } = data;
+
+    const payload: Record<string, unknown> = { ...rest, updatedAt: Timestamp.now() };
+    if (rest.baseDailyPrice !== undefined) {
+      payload.baseDailyPrice = Number(rest.baseDailyPrice); // store numeric, consistent with createProduct
+    }
+    await updateDoc(docRef, payload);
+
+    // If tagIds is explicitly provided, resync the tags subcollection
+    if (tagIds) {
+      const tagsRef = collection(db, 'products', id, 'tags');
+      const existing = await getDocs(tagsRef);
+      await Promise.all(existing.docs.map(d => deleteDoc(d.ref)));
+      await Promise.all(
+        tagIds.map(async (tagId) => {
+          const tagDoc = await getDoc(doc(db, 'tags', tagId));
+          if (tagDoc.exists()) {
+            const tagData = tagDoc.data();
+            await addDoc(tagsRef, { id: tagId, name: tagData.name, type: tagData.type || 'other' });
+          }
+        })
+      );
+    }
+
     const updatedDoc = await getDoc(docRef);
     return convertDoc<Product>(updatedDoc);
   },
@@ -815,8 +862,23 @@ export const adminApi = {
 
   getAllUsers: async (params?: { role?: string }): Promise<User[]> => {
     const usersRef = collection(db, 'users');
-    const snapshot = await getDocs(usersRef);
-    let users = snapshot.docs.map(d => convertDoc<User>(d));
+    const [snapshot, ordersSnapshot] = await Promise.all([
+      getDocs(usersRef),
+      getDocs(collection(db, 'orders')),
+    ]);
+
+    // Tally order counts per user once
+    const orderCounts = new Map<string, number>();
+    ordersSnapshot.docs.forEach(d => {
+      const uid = d.data().userId;
+      if (uid) orderCounts.set(uid, (orderCounts.get(uid) || 0) + 1);
+    });
+
+    let users = snapshot.docs.map(d => {
+      const user = convertDoc<User>(d);
+      (user as User & { _count?: { orders: number } })._count = { orders: orderCounts.get(user.id) || 0 };
+      return user;
+    });
 
     // Client-side filtering
     if (params?.role) {
@@ -1084,34 +1146,22 @@ export const adminApi = {
     const assetsRef = collection(db, 'products', productId, 'assets');
     const assetsSnapshot = await getDocs(assetsRef);
 
-    let availableCount = 0;
+    // Only 'available' assets are candidates
+    const candidates = assetsSnapshot.docs.filter(d => d.data().status === 'available');
 
-    for (const assetDoc of assetsSnapshot.docs) {
-      const asset = assetDoc.data();
+    // Check each candidate's blocked periods in parallel (avoid sequential N+1)
+    const blockedFlags = await Promise.all(
+      candidates.map(async (assetDoc) => {
+        const blockedRef = collection(db, 'products', productId, 'assets', assetDoc.id, 'blockedPeriods');
+        const blockedSnapshot = await getDocs(blockedRef);
+        return blockedSnapshot.docs.some(b => {
+          const blocked = b.data();
+          return blocked.startDate <= endDate && blocked.endDate >= startDate;
+        });
+      })
+    );
 
-      // 사용 가능 상태가 아니면 스킵
-      if (asset.status !== 'available') continue;
-
-      // 해당 자산의 차단 기간 확인
-      const blockedRef = collection(db, 'products', productId, 'assets', assetDoc.id, 'blockedPeriods');
-      const blockedSnapshot = await getDocs(blockedRef);
-
-      let isBlocked = false;
-      for (const blockedDoc of blockedSnapshot.docs) {
-        const blocked = blockedDoc.data();
-        // 날짜 범위 겹침 확인
-        if (blocked.startDate <= endDate && blocked.endDate >= startDate) {
-          isBlocked = true;
-          break;
-        }
-      }
-
-      if (!isBlocked) {
-        availableCount++;
-      }
-    }
-
-    return availableCount;
+    return blockedFlags.filter(isBlocked => !isBlocked).length;
   },
 };
 

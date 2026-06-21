@@ -115,8 +115,8 @@ export default function AdminUsersPage() {
   const getRoleLabel = (role: string) => {
     const roleMap = {
       admin: '관리자',
-      user: '일반 사용자',
-      guest: '게스트',
+      customer: '일반 고객',
+      supplier: '공급자',
     };
     return roleMap[role as keyof typeof roleMap] || role;
   };
@@ -124,10 +124,10 @@ export default function AdminUsersPage() {
   const getRoleBadge = (role: string) => {
     const roleStyles = {
       admin: { icon: ShieldCheck, color: 'bg-red-100 text-red-800' },
-      user: { icon: User, color: 'bg-blue-100 text-blue-800' },
-      guest: { icon: Shield, color: 'bg-slate-100 text-slate-800' },
+      customer: { icon: User, color: 'bg-blue-100 text-blue-800' },
+      supplier: { icon: Shield, color: 'bg-slate-100 text-slate-800' },
     };
-    const roleStyle = roleStyles[role as keyof typeof roleStyles] || roleStyles.user;
+    const roleStyle = roleStyles[role as keyof typeof roleStyles] || roleStyles.customer;
     const Icon = roleStyle.icon;
 
     return (
@@ -186,8 +186,8 @@ export default function AdminUsersPage() {
               >
                 <option value="all">전체 권한</option>
                 <option value="admin">관리자</option>
-                <option value="user">일반 사용자</option>
-                <option value="guest">게스트</option>
+                <option value="customer">일반 고객</option>
+                <option value="supplier">공급자</option>
               </select>
             </div>
           </div>
@@ -289,20 +289,20 @@ export default function AdminUsersPage() {
                               관리자로 변경
                             </button>
                             <button
-                              onClick={() => handleRoleChange(user.id, 'user', user.name)}
+                              onClick={() => handleRoleChange(user.id, 'customer', user.name)}
                               className="w-full px-4 py-2 text-left text-sm hover:bg-blue-50 text-blue-700 flex items-center gap-2"
-                              disabled={user.role === 'user'}
+                              disabled={user.role === 'customer'}
                             >
                               <UserCog className="w-4 h-4" />
-                              일반 사용자로 변경
+                              일반 고객으로 변경
                             </button>
                             <button
-                              onClick={() => handleRoleChange(user.id, 'guest', user.name)}
+                              onClick={() => handleRoleChange(user.id, 'supplier', user.name)}
                               className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 text-slate-700 flex items-center gap-2"
-                              disabled={user.role === 'guest'}
+                              disabled={user.role === 'supplier'}
                             >
                               <Shield className="w-4 h-4" />
-                              게스트로 변경
+                              공급자로 변경
                             </button>
                             <hr className="my-2" />
                             <button
@@ -339,19 +339,19 @@ export default function AdminUsersPage() {
             <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-center gap-3 mb-2">
                 <User className="w-5 h-5 text-blue-600" />
-                <span className="font-medium text-blue-800">일반 사용자</span>
+                <span className="font-medium text-blue-800">일반 고객</span>
               </div>
               <p className="text-2xl font-bold text-blue-900">
-                {users.filter(u => u.role === 'user').length}명
+                {users.filter(u => u.role === 'customer').length}명
               </p>
             </div>
             <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
               <div className="flex items-center gap-3 mb-2">
                 <Shield className="w-5 h-5 text-slate-600" />
-                <span className="font-medium text-slate-800">게스트</span>
+                <span className="font-medium text-slate-800">공급자</span>
               </div>
               <p className="text-2xl font-bold text-slate-900">
-                {users.filter(u => u.role === 'guest').length}명
+                {users.filter(u => u.role === 'supplier').length}명
               </p>
             </div>
           </div>

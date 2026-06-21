@@ -103,6 +103,7 @@ export default function CheckoutPage() {
         deliveryMethod: 'parcel', // 택배 배송 고정
         shippingAddress,
         deliveryNotes: formData.notes,
+        deliveryFee,
       };
 
       const order = await orderApi.create(orderData);
