@@ -10,7 +10,7 @@
  */
 const { initializeApp } = require('firebase/app');
 const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
-const { getFirestore, collection, getDocs } = require('firebase/firestore');
+const { getFirestore, collection, getDocs, doc, getDoc } = require('firebase/firestore');
 
 const firebaseConfig = {
   apiKey: 'AIzaSyC5OQ8nhydwpM0CZUC7WZfswnoY8g3nnnc',
@@ -79,6 +79,56 @@ const isPlaceholderImage = (img) =>
       });
     });
   }
+
+  // === Deep cleanup checks ===
+  console.log('\n--- Deep checks ---');
+
+  // 1) Duplicate products by title
+  const prodSnap = await getDocs(collection(db, 'products'));
+  const byTitle = new Map();
+  prodSnap.docs.forEach((d) => {
+    const t = (d.data().title || '').trim();
+    if (!byTitle.has(t)) byTitle.set(t, []);
+    byTitle.get(t).push(d.id);
+  });
+  let dupCount = 0;
+  for (const [title, ids] of byTitle) {
+    if (ids.length > 1) {
+      dupCount++;
+      console.log(`  ⚠ duplicate title "${title}" → ${ids.length} products: ${ids.join(', ')}`);
+    }
+  }
+  if (!dupCount) console.log('  ✓ no duplicate product titles');
+
+  // 2) Products with zero assets (cannot be rented) + collect referenced tag ids
+  const referencedTagIds = new Set();
+  let noAsset = 0;
+  await Promise.all(
+    prodSnap.docs.map(async (d) => {
+      const [assets, tags] = await Promise.all([
+        getDocs(collection(db, 'products', d.id, 'assets')),
+        getDocs(collection(db, 'products', d.id, 'tags')),
+      ]);
+      tags.docs.forEach((t) => referencedTagIds.add(t.data().id || t.id));
+      if (assets.size === 0) {
+        noAsset++;
+        console.log(`  ⚠ product without assets: ${d.id} "${d.data().title || ''}"`);
+      }
+    })
+  );
+  if (!noAsset) console.log('  ✓ every product has at least one asset');
+
+  // 3) Unused tags (defined but never attached to a product)
+  const tagSnap = await getDocs(collection(db, 'tags'));
+  const unused = tagSnap.docs.filter((t) => !referencedTagIds.has(t.id) && !referencedTagIds.has(t.data().id));
+  console.log(`  tags: ${tagSnap.size} total, ${referencedTagIds.size} referenced, ${unused.length} unused`);
+  if (unused.length) {
+    console.log('    unused tag ids: ' + unused.map((t) => `${t.id}(${t.data().name || '?'})`).join(', '));
+  }
+
+  // 4) Settings presence
+  const settings = await getDocs(collection(db, 'settings'));
+  if (settings.size === 0) console.log('  ⚠ no settings doc (bank account for transfer-payment flow is unset)');
 
   console.log('\nInspection complete (read-only, nothing changed).');
   process.exit(0);
