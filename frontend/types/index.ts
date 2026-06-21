@@ -233,20 +233,6 @@ export interface Notification {
   updatedAt: string;
 }
 
-// API Response Types
-export interface ApiResponse<T> {
-  data: T;
-  message?: string;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
 // Auth Types
 export interface AuthResponse {
   accessToken: string;
@@ -322,23 +308,6 @@ export interface ProductFormData {
   status: 'active' | 'inactive';
 }
 
-export interface CategoryFormData {
-  name: string;
-  slug: string;
-  parentId: string;
-}
-
-export interface AssetFormData {
-  serialNumber: string;
-  condition: string;
-}
-
-export interface BlockedPeriodFormData {
-  startDate: string;
-  endDate: string;
-  reason: string;
-}
-
 // Search and Filter Types
 export interface SearchParams {
   startDate?: string;
@@ -349,31 +318,7 @@ export interface SearchParams {
   includeUnavailable?: boolean;
 }
 
-export interface AdminProductParams {
-  status?: string;
-  categoryId?: string;
-  page?: number;
-  limit?: number;
-}
-
-export interface AdminOrderParams {
-  status?: string;
-  page?: number;
-  limit?: number;
-}
-
-export interface AdminUserParams {
-  role?: string;
-  page?: number;
-  limit?: number;
-}
-
 // Component Prop Types
-export interface IconProps {
-  className?: string;
-  size?: number;
-}
-
 export interface ToastProps {
   message: string;
   type: 'success' | 'error' | 'info' | 'warning';

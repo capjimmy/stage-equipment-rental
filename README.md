@@ -1,172 +1,72 @@
 # 🎭 Stage Equipment Rental Platform
 
-공연/무대용품 멀티벤더 렌탈 플랫폼 MVP
+공연/무대용품 렌탈 플랫폼. 날짜 기반 검색과 자산(Asset) 단위 예약 관리, 계좌이체 승인형 결제 플로우를 제공합니다.
 
-## 📋 프로젝트 개요
+## 📦 저장소 구조
 
-날짜 선택 기반 검색과 해시태그 태깅을 활용한 공연 무대용품 렌탈 이커머스 플랫폼입니다.
+```
+frontend/        ← 실제 서비스 (Next.js 16 + React 19 + Firebase). Vercel 배포 루트.
+docs/            기획·사업 문서
+source/          상품 데이터 추출용 원본 자료(의상 바이블 등)
+*.html, *.txt    로드맵 / 운영정책 / 개발 로그
+```
 
-## 🚀 빠른 시작
+> 과거의 NestJS + SQLite 백엔드와 루트 스타터 앱은 제거되었습니다.
+> 백엔드는 전부 **Firebase(Firestore · Storage · Auth)** 로 대체되었습니다.
 
-### 프론트엔드 실행
+## 🚀 개발
+
 ```bash
 cd frontend
 npm install
-npm run dev
-```
-브라우저에서 http://localhost:3000 접속
-
-### 백엔드 실행
-```bash
-cd backend
-npm install
-npm run start:dev
-```
-서버 실행 후 http://localhost:3001/api 접속
-
-### 데이터베이스 시드 (최초 1회)
-```bash
-cd backend
-npx ts-node src/seed.ts
+npm run dev      # http://localhost:3000
+npm run build    # 프로덕션 빌드
+npm run lint
 ```
 
-**테스트 계정:**
-- 관리자: admin@example.com / password123
-- 공급자1: supplier1@example.com / password123
-- 공급자2: supplier2@example.com / password123
-- 고객: customer@example.com / password123
-
-## ✅ 완성된 기능
-
-### 프론트엔드
-- ✅ **트렌디한 메인 페이지** (보라색-핑크 그라디언트)
-  - 날짜 우선 선택 UI
-  - 인기 태그 표시
-  - 카테고리별 탐색 (의상/소품/무대장치/장비)
-  - 추천 연출 세트
-
-- ✅ **검색 결과 페이지**
-  - 고급 필터 (카테고리, 상태, 대여 가능 여부)
-  - 상품 카드 그리드
-  - 대여 가능/불가 상품 구분
-  - 실시간 재고 표시
-
-### 백엔드
-- ✅ **완전한 데이터베이스 스키마** (13개 엔티티)
-  - User, Product, Asset, Order, Rental
-  - Payment, Settlement, Category, Tag
-  - Cart, CartItem, RentalIssue, Notification
-
-- ✅ **인증 시스템** (JWT + RBAC)
-  - 회원가입/로그인 API
-  - JWT 토큰 기반 인증
-  - 역할별 권한 관리 (Customer/Supplier/Admin)
-
-- ✅ **상품 API**
-  - 날짜 기반 검색
-  - 태그 검색
-  - 실시간 재고 계산
-
-- ✅ **데이터베이스**
-  - SQLite 기반 (better-sqlite3)
-  - 시드 데이터 자동 생성
-  - 4개 상품 + 28개 자산 샘플 데이터
+Firebase 설정은 `frontend/lib/firebase.ts` 에 있습니다 (클라이언트 공개 키).
 
 ## 🏗️ 기술 스택
 
-### Frontend
-- Next.js 15 + TypeScript + Tailwind CSS
-- Zustand + React Query
-- Lucide React (아이콘)
+- **Next.js 16** (App Router) · **React 19** · **TypeScript**
+- **Tailwind CSS 3**
+- **Firebase**: Firestore(DB) · Storage(이미지) · Auth(이메일/비밀번호)
+- **React Query** (서버 상태) · 장바구니는 localStorage
+- 데이터 접근은 `lib/firebaseService.ts` 단일 레이어, `lib/api.ts` 가 import 창구(barrel)
 
-### Backend
-- NestJS + TypeScript
-- TypeORM + PostgreSQL/SQLite
-- JWT + Passport
-
-## 📊 핵심 비즈니스 로직
-
-### 1. 날짜 우선 검색
-- 검색 전 대여 기간 필수 선택
-- 선택된 날짜에 대여 가능한 상품만 노출
-- "대여 불가 상품도 표시" 옵션 지원
-
-### 2. 실물 자산 관리
-- **Product**: 상품 정보 (카탈로그)
-- **Asset**: 실제 대여 가능한 실물 (예: A-001, A-002)
-- 각 Asset별 독립적인 일정 관리
-
-### 3. 예약 충돌 방지
-- buffer_days = 1 (검수/세탁 시간)
-- blocked_end = end_date + 1
-- 같은 Asset의 blocked 기간 겹침 방지
-
-### 4. 계좌이체 승인형 결제 (2단계)
-```
-REQUESTED
-  → HOLD_PENDINGPAY (1차 승인, Asset 배정)
-  → CONFIRMED (2차 승인, 입금 확인)
-```
-- 입금 기한: 24시간 고정
-- 기한 초과 시 자동 EXPIRED
-
-### 5. 취소/환불 정책
-- 입금 후 2시간: 100% 환불 (쿨링오프)
-- 대여 21일 이전: 100% 환불
-- 대여 14-20일 전: 50% 환불
-- 대여 7-13일 전: 20% 환불
-- 대여 0-6일 전: 10% 환불
-
-### 6. 정산
-- 기본 렌탈료: 50:50 (플랫폼:공급자)
-- 파손/연체 추가 청구: 공급자 100%
-
-## 📁 주요 파일
+## 📂 주요 디렉터리 (`frontend/`)
 
 ```
-frontend/
-├── app/page.tsx              # 메인 페이지
-├── app/search/page.tsx       # 검색 페이지
-└── app/globals.css           # 디자인 시스템
-
-backend/
-├── src/entities/             # 13개 엔티티
-├── src/auth/                 # 인증 모듈
-└── src/products/             # 상품 API
+app/             라우트 (고객 / auth / admin)
+  ├─ admin/      관리자: 상품·카테고리·주문·사용자·추천세트
+  ├─ auth/       로그인 · 회원가입 (정본 경로)
+  ├─ product/, search/, cart/, checkout/, order/, mypage/, featured/
+components/      공용 UI (FloatingCart, RentalCalendar, AdminLayout 등)
+hooks/           React Query 훅 (useProducts, useOrders, useCart 등)
+lib/             firebase.ts · firebaseService.ts · api.ts
+types/           도메인 타입 정의
 ```
 
-## 🎨 디자인 하이라이트
+## 📊 핵심 도메인 로직
 
-- **트렌디한 컬러**: Violet-500 + Pink-500 그라디언트
-- **반응형 디자인**: Mobile-first approach
-- **애니메이션**: Smooth transitions & hover effects
-- **일관된 컴포넌트**: btn, card, tag, input 클래스
+- **자산(Asset) 단위 관리**: Product(카탈로그) ↔ Asset(실물, 고유 코드) — 자산별 예약 불가 기간으로 충돌 방지
+- **계좌이체 승인형 결제(2단계)**: `requested → approved(입금대기) → confirmed(입금확인/예약확정)`
+- **취소/환불 정책**: 대여일 기준 차등 환불 (운영정책 문서 참고)
+- **정산**: 기본 렌탈료 50:50(플랫폼:공급자), 파손/연체 추가분 공급자 100%
 
-## 🚧 추가 개발 필요
+## 🔐 Firebase 보안 규칙
 
-- [ ] 장바구니 기능 완성
-- [ ] 주문/결제 플로우
-- [ ] 관리자 대시보드
-- [ ] 공급자 대시보드
-- [ ] 배치 작업 (자동 만료, 정산)
-- [ ] 알림 시스템
-- [ ] 프론트엔드-백엔드 실제 연동
+`frontend/firestore.rules` · `frontend/storage.rules` 는 저장소에 있지만 **자동 배포되지 않습니다**.
+적용하려면:
 
-## 📝 개발 로그
+```bash
+cd frontend
+firebase deploy --only firestore:rules,storage
+```
 
-- 2025-12-28: 프로젝트 초기 구조 완성
-  - 프론트엔드 메인 + 검색 페이지
-  - 백엔드 데이터베이스 스키마
-  - 인증 시스템
-  - 상품 검색 API
+규칙은 카탈로그 읽기를 인증 사용자에게 허용하고, 쓰기는 소유자/관리자로 제한합니다.
+배포 전 Firebase 콘솔 Rules Playground에서 테스트하세요.
 
-- 2025-12-29: 백엔드 완전 작동
-  - SQLite enum/timestamp 호환성 문제 해결
-  - 백엔드 서버 정상 실행 (localhost:3001/api)
-  - 시드 데이터 생성 완료
-  - API 테스트 통과 (검색, 인증 등)
+## 🚢 배포
 
----
-
-**개발 상태**: 백엔드 완료, 프론트엔드-백엔드 연동 진행 중
-**다음 단계**: 프론트엔드에서 실제 API 호출하여 데이터 표시
+Vercel이 `frontend/` 를 루트 디렉터리로 빌드/배포합니다 (`master` push 시 자동).

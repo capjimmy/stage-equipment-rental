@@ -173,8 +173,8 @@ export default function Home() {
             <div>
               <h5 className="font-bold mb-3 md:mb-4 text-sm md:text-base">계정</h5>
               <ul className="space-y-1.5 md:space-y-2 text-xs md:text-sm text-slate-600">
-                <li><Link href="/login">로그인</Link></li>
-                <li><Link href="/register">회원가입</Link></li>
+                <li><Link href="/auth/login">로그인</Link></li>
+                <li><Link href="/auth/register">회원가입</Link></li>
               </ul>
             </div>
           </div>

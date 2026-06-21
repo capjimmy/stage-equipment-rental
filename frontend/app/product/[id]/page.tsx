@@ -53,7 +53,7 @@ function ProductDetailContent() {
       const err = error as { response?: { status?: number; data?: { message?: string } } };
       if (err.response?.status === 401) {
         showError('로그인이 필요합니다.');
-        setTimeout(() => router.push('/login'), 1500);
+        setTimeout(() => router.push('/auth/login'), 1500);
       } else {
         showError(err.response?.data?.message || '장바구니 추가에 실패했습니다.');
       }

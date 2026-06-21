@@ -15,7 +15,7 @@ export default function useAdminAuth() {
         const userStr = localStorage.getItem('user');
 
         if (!token) {
-          router.push('/login');
+          router.push('/auth/login');
           return;
         }
 
@@ -34,7 +34,7 @@ export default function useAdminAuth() {
         setIsAdmin(true);
       } catch (error) {
         console.error('Auth check failed:', error);
-        router.push('/login');
+        router.push('/auth/login');
       } finally {
         setIsChecking(false);
       }

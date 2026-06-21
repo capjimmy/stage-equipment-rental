@@ -10,7 +10,7 @@ export default function FloatingCart() {
   const pathname = usePathname();
 
   // 관리자 페이지, 장바구니 페이지, 로그인/회원가입 페이지에서는 숨김
-  if (pathname?.startsWith('/admin') || pathname === '/cart' || pathname === '/checkout' || pathname?.startsWith('/auth') || pathname === '/login' || pathname === '/register') {
+  if (pathname?.startsWith('/admin') || pathname === '/cart' || pathname === '/checkout' || pathname?.startsWith('/auth')) {
     return null;
   }
 

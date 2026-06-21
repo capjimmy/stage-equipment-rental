@@ -28,7 +28,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
-    router.push('/login');
+    router.push('/auth/login');
   };
 
   const menuItems = [

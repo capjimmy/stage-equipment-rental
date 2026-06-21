@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   addDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
   query,
@@ -42,6 +43,8 @@ import {
   RegisterData,
   DashboardStats,
   AdminOrder,
+  FeaturedSet,
+  Inquiry,
 } from '@/types';
 
 // Helper function to convert Firestore document to typed object
@@ -53,6 +56,46 @@ const convertDoc = <T>(doc: DocumentData): T => {
     createdAt: data.createdAt?.toDate?.()?.toISOString() || data.createdAt,
     updatedAt: data.updatedAt?.toDate?.()?.toISOString() || data.updatedAt,
   } as T;
+};
+
+// Batch-fetch helpers — dedupe IDs and read in parallel to avoid N+1 queries
+type ProductBrief = { id: string; title: string; baseDailyPrice?: string; images: string[] };
+
+const fetchProductBriefs = async (ids: string[]): Promise<Map<string, ProductBrief>> => {
+  const unique = [...new Set(ids.filter(Boolean))];
+  const map = new Map<string, ProductBrief>();
+  await Promise.all(
+    unique.map(async (pid) => {
+      try {
+        const snap = await getDoc(doc(db, 'products', pid));
+        if (snap.exists()) {
+          const d = snap.data();
+          map.set(pid, { id: snap.id, title: d.title, baseDailyPrice: d.baseDailyPrice, images: d.images || [] });
+        }
+      } catch (error) {
+        console.error('Failed to load product:', pid, error);
+      }
+    })
+  );
+  return map;
+};
+
+const fetchUsersByIds = async (ids: string[]): Promise<Map<string, User>> => {
+  const unique = [...new Set(ids.filter(Boolean))];
+  const map = new Map<string, User>();
+  await Promise.all(
+    unique.map(async (uid) => {
+      try {
+        const snap = await getDoc(doc(db, 'users', uid));
+        if (snap.exists()) {
+          map.set(uid, convertDoc<User>(snap));
+        }
+      } catch (error) {
+        console.error('Failed to load user:', uid, error);
+      }
+    })
+  );
+  return map;
 };
 
 // Products API
@@ -159,30 +202,21 @@ export const productApi = {
 
     const product = convertDoc<Product>(docSnap);
 
-    // Get category
-    if (product.categoryId) {
-      const categoryDoc = await getDoc(doc(db, 'categories', product.categoryId));
-      if (categoryDoc.exists()) {
-        product.category = convertDoc<Category>(categoryDoc);
-      }
-    }
+    // Fetch category, supplier, tags, and assets in parallel (independent reads)
+    const [categoryDoc, supplierDoc, tagsSnapshot, assetsSnapshot] = await Promise.all([
+      product.categoryId ? getDoc(doc(db, 'categories', product.categoryId)) : Promise.resolve(null),
+      product.supplierId ? getDoc(doc(db, 'users', product.supplierId)) : Promise.resolve(null),
+      getDocs(collection(db, 'products', id, 'tags')),
+      getDocs(collection(db, 'products', id, 'assets')),
+    ]);
 
-    // Get supplier
-    if (product.supplierId) {
-      const supplierDoc = await getDoc(doc(db, 'users', product.supplierId));
-      if (supplierDoc.exists()) {
-        product.supplier = convertDoc<User>(supplierDoc) as any;
-      }
+    if (categoryDoc?.exists()) {
+      product.category = convertDoc<Category>(categoryDoc);
     }
-
-    // Get tags
-    const tagsRef = collection(db, 'products', id, 'tags');
-    const tagsSnapshot = await getDocs(tagsRef);
+    if (supplierDoc?.exists()) {
+      product.supplier = convertDoc<User>(supplierDoc) as any;
+    }
     product.tags = tagsSnapshot.docs.map(d => convertDoc<Tag>(d));
-
-    // Get assets
-    const assetsRef = collection(db, 'products', id, 'assets');
-    const assetsSnapshot = await getDocs(assetsRef);
     product.assets = assetsSnapshot.docs.map(d => convertDoc<Asset>(d));
 
     return product;
@@ -262,34 +296,6 @@ export const categoryApi = {
 };
 
 // Featured Sets API
-interface FeaturedSet {
-  id: string;
-  title: string;
-  description: string;
-  detailedDescription?: string;
-  imageUrl: string;
-  detailImages?: string[];
-  videos?: string[];
-  productIds: string[];
-  order: number;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Inquiry {
-  id: string;
-  featuredSetId?: string;
-  featuredSetTitle?: string;
-  name: string;
-  phone: string;
-  email?: string;
-  message: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
-  createdAt: string;
-  updatedAt: string;
-}
-
 export const featuredSetApi = {
   getAll: async (): Promise<FeaturedSet[]> => {
     const setsRef = collection(db, 'featuredSets');
@@ -411,9 +417,8 @@ export const authApi = {
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     };
-    await updateDoc(userRef, userData).catch(() =>
-      addDoc(collection(db, 'users'), { id: userCredential.user.uid, ...userData })
-    );
+    // Create-or-overwrite the profile doc keyed by uid so login can read users/{uid}
+    await setDoc(userRef, userData);
 
     const token = await userCredential.user.getIdToken();
 
@@ -463,6 +468,8 @@ export const authApi = {
   logout: (): void => {
     signOut(auth);
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
   },
 };
 
@@ -603,42 +610,23 @@ export const orderApi = {
     const q = query(ordersRef, where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
 
-    const orders: Order[] = [];
-    for (const docSnap of snapshot.docs) {
-      const order = convertDoc<Order>(docSnap);
-      const orderData = docSnap.data();
+    const raw = snapshot.docs.map(docSnap => ({ order: convertDoc<Order>(docSnap), data: docSnap.data() }));
 
-      // Populate product info for each item
-      if (orderData.items && Array.isArray(orderData.items)) {
-        const populatedItems = await Promise.all(
-          orderData.items.map(async (item: { productId: string; quantity: number; pricePerDay: string | number }) => {
-            try {
-              const productDoc = await getDoc(doc(db, 'products', item.productId));
-              if (productDoc.exists()) {
-                const productData = productDoc.data();
-                return {
-                  ...item,
-                  product: {
-                    id: productDoc.id,
-                    title: productData.title,
-                    baseDailyPrice: productData.baseDailyPrice,
-                    images: productData.images || [],
-                  },
-                };
-              }
-            } catch (error) {
-              console.error('Failed to load product:', item.productId, error);
-            }
-            return item;
-          })
-        );
-        (order as any).items = populatedItems;
+    // Collect every referenced product ID and fetch them once (deduped, parallel)
+    const productIds = raw.flatMap(({ data }) =>
+      Array.isArray(data.items) ? data.items.map((i: { productId: string }) => i.productId) : []
+    );
+    const productMap = await fetchProductBriefs(productIds);
+
+    return raw.map(({ order, data }) => {
+      if (Array.isArray(data.items)) {
+        (order as any).items = data.items.map((item: { productId: string }) => {
+          const product = productMap.get(item.productId);
+          return product ? { ...item, product } : item;
+        });
       }
-
-      orders.push(order);
-    }
-
-    return orders;
+      return order;
+    });
   },
 
   getOrderById: async (id: string): Promise<Order> => {
@@ -773,61 +761,46 @@ export const adminApi = {
     const q = query(ordersRef, orderBy('createdAt', 'desc'));
     const snapshot = await getDocs(q);
 
-    const orders: AdminOrder[] = [];
-    for (const docSnap of snapshot.docs) {
-      const order = convertDoc<AdminOrder>(docSnap);
-      const orderData = docSnap.data();
+    const raw = snapshot.docs.map(docSnap => ({ order: convertDoc<AdminOrder>(docSnap), data: docSnap.data() }));
 
-      // Get user info
-      if (orderData.userId) {
-        const userDoc = await getDoc(doc(db, 'users', orderData.userId));
-        if (userDoc.exists()) {
-          order.user = convertDoc<User>(userDoc) as any;
-        }
+    // Batch-fetch all referenced users and products once (deduped, parallel)
+    const userMap = await fetchUsersByIds(raw.map(({ data }) => data.userId));
+    const productIds = raw.flatMap(({ data }) =>
+      Array.isArray(data.items) ? data.items.map((i: { productId: string }) => i.productId) : []
+    );
+    const productMap = await fetchProductBriefs(productIds);
+
+    return raw.map(({ order, data }) => {
+      const user = data.userId ? userMap.get(data.userId) : undefined;
+      if (user) {
+        order.user = user as any;
       }
 
-      // Populate product info for each item
-      if (orderData.items && Array.isArray(orderData.items)) {
-        const populatedItems = await Promise.all(
-          orderData.items.map(async (item: { productId: string; quantity: number; pricePerDay: string | number }) => {
-            try {
-              const productDoc = await getDoc(doc(db, 'products', item.productId));
-              if (productDoc.exists()) {
-                const productData = productDoc.data();
-                return {
+      if (Array.isArray(data.items)) {
+        order.items = data.items.map((item: { productId: string; quantity: number; pricePerDay: string | number }) => {
+          const product = productMap.get(item.productId);
+          return {
+            id: item.productId,
+            quantity: item.quantity,
+            pricePerDay: Number(item.pricePerDay),
+            product: product
+              ? {
+                  id: product.id,
+                  title: product.title,
+                  baseDailyPrice: product.baseDailyPrice,
+                  images: product.images,
+                }
+              : {
                   id: item.productId,
-                  quantity: item.quantity,
-                  pricePerDay: Number(item.pricePerDay),
-                  product: {
-                    id: productDoc.id,
-                    title: productData.title,
-                    baseDailyPrice: productData.baseDailyPrice,
-                    images: productData.images || [],
-                  },
-                };
-              }
-            } catch (error) {
-              console.error('Failed to load product:', item.productId, error);
-            }
-            return {
-              id: item.productId,
-              quantity: item.quantity,
-              pricePerDay: Number(item.pricePerDay),
-              product: {
-                id: item.productId,
-                title: '상품 정보 없음',
-                images: [],
-              },
-            };
-          })
-        );
-        order.items = populatedItems;
+                  title: '상품 정보 없음',
+                  images: [],
+                },
+          };
+        });
       }
 
-      orders.push(order);
-    }
-
-    return orders;
+      return order;
+    });
   },
 
   updateOrderStatus: async (id: string, status: string): Promise<Order> => {

@@ -20,7 +20,7 @@ export default function MyPage() {
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
-      router.push('/login');
+      router.push('/auth/login');
       return;
     }
     const userData = localStorage.getItem('user');
@@ -30,7 +30,7 @@ export default function MyPage() {
         setUser(parsedUser);
         setIsAdmin(parsedUser.role === 'admin');
       } catch {
-        router.push('/login');
+        router.push('/auth/login');
       }
     }
   }, [router]);

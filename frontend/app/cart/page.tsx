@@ -25,7 +25,7 @@ export default function CartPage() {
       } catch (error: unknown) {
         console.error('Failed to fetch cart:', error);
         const err = error as { response?: { status: number } }; if (err.response?.status === 401) {
-          router.push('/login');
+          router.push('/auth/login');
         }
       } finally {
         setLoading(false);
