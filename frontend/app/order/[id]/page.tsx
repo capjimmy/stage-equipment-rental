@@ -159,7 +159,7 @@ export default function OrderDetailPage() {
       window.location.reload();
     } catch (error) {
       console.error('Failed to confirm payment:', error);
-      alert('입금 확인 중 오류가 발생했습니다.');
+      alert((error as Error)?.message || '입금 확인 중 오류가 발생했습니다.');
     }
   };
 
@@ -200,12 +200,17 @@ export default function OrderDetailPage() {
     }
 
     try {
-      await orderApi.cancel(orderId, reason);
+      // Admin cancel releases the locked assets; customer self-cancel (requested only) does not.
+      if (isAdmin) {
+        await adminApi.cancelOrder(orderId);
+      } else {
+        await orderApi.cancel(orderId, reason);
+      }
       alert('예약이 취소되었습니다.');
       window.location.reload();
     } catch (error) {
       console.error('Failed to cancel order:', error);
-      alert('예약 취소 중 오류가 발생했습니다.');
+      alert((error as Error)?.message || '예약 취소 중 오류가 발생했습니다.');
     }
   };
 
@@ -518,8 +523,8 @@ export default function OrderDetailPage() {
                   </>
                 ) : (
                   <>
-                    {/* 사용자: 문의접수/승인 상태에서만 취소 가능 */}
-                    {(order.status === 'requested' || order.status === 'approved') && (
+                    {/* 사용자: 승인 전(문의접수) 상태에서만 직접 취소 가능. 승인 후엔 자산이 배정되어 관리자만 취소 가능. */}
+                    {order.status === 'requested' && (
                       <button onClick={handleCancelOrder} className="btn btn-outline w-full text-red-600 border-red-300 hover:bg-red-50 text-sm sm:text-base touch-manipulation">
                         <XCircle className="w-5 h-5" />
                         예약 취소

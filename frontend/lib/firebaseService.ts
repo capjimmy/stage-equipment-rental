@@ -12,6 +12,7 @@ import {
   orderBy,
   Timestamp,
   DocumentData,
+  runTransaction,
 } from 'firebase/firestore';
 import {
   ref,
@@ -668,6 +669,12 @@ export const orderApi = {
 
   cancel: async (id: string, reason: string): Promise<Order> => {
     const docRef = doc(db, 'orders', id);
+    const snap = await getDoc(docRef);
+    // After approval an asset is locked to this order; releasing it needs admin
+    // rights, so customers may only self-cancel while still 'requested'.
+    if (snap.exists() && snap.data().status !== 'requested') {
+      throw new Error('승인된 예약은 직접 취소할 수 없습니다. 관리자에게 문의해주세요.');
+    }
     await updateDoc(docRef, {
       status: 'cancelled',
       cancelReason: reason,
@@ -677,6 +684,107 @@ export const orderApi = {
     const updatedDoc = await getDoc(docRef);
     return convertDoc<Order>(updatedDoc);
   },
+};
+
+// === Asset booking (double-booking prevention) ===
+// A booking is stored as an element of the `bookings` array on each asset doc.
+// Assignment happens in a per-asset transaction, so two concurrent orders can
+// never lock the same asset for overlapping dates (Firestore serializes the
+// read+write and the loser sees the winner's booking and is rejected).
+type Booking = { startDate: string; endDate: string; orderId: string };
+
+const datesOverlap = (aStart: string, aEnd: string, bStart: string, bEnd: string) =>
+  aStart <= bEnd && aEnd >= bStart;
+
+// Lock `quantity` available assets of a product for [startDate, endDate] to orderId.
+// Throws '재고 부족...' (rolling back any partial locks) if not enough assets are free.
+const lockAssetsForItem = async (
+  productId: string,
+  quantity: number,
+  startDate: string,
+  endDate: string,
+  orderId: string
+): Promise<string[]> => {
+  const assetsSnap = await getDocs(collection(db, 'products', productId, 'assets'));
+
+  // Candidates: 'available' status and no overlapping manual maintenance block.
+  const candidates: string[] = [];
+  await Promise.all(
+    assetsSnap.docs.map(async (a) => {
+      if (a.data().status !== 'available') return;
+      const blocked = await getDocs(collection(db, 'products', productId, 'assets', a.id, 'blockedPeriods'));
+      const manualOverlap = blocked.docs.some((b) => {
+        const x = b.data();
+        return datesOverlap(x.startDate, x.endDate, startDate, endDate);
+      });
+      if (!manualOverlap) candidates.push(a.id);
+    })
+  );
+
+  const locked: string[] = [];
+  for (const assetId of candidates) {
+    if (locked.length >= quantity) break;
+    const assetRef = doc(db, 'products', productId, 'assets', assetId);
+    try {
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(assetRef);
+        const bookings: Booking[] = snap.data()?.bookings || [];
+        if (bookings.some((b) => datesOverlap(b.startDate, b.endDate, startDate, endDate))) {
+          throw new Error('ASSET_TAKEN');
+        }
+        tx.update(assetRef, {
+          bookings: [...bookings, { startDate, endDate, orderId }],
+          updatedAt: Timestamp.now(),
+        });
+      });
+      locked.push(assetId);
+    } catch (e) {
+      if (e instanceof Error && e.message === 'ASSET_TAKEN') continue; // taken concurrently, try next
+      throw e;
+    }
+  }
+
+  if (locked.length < quantity) {
+    await Promise.all(locked.map((id) => releaseAssetBooking(productId, id, orderId)));
+    throw new Error(`재고 부족: 해당 기간에 예약 가능한 자산이 부족합니다 (확보 ${locked.length}/${quantity})`);
+  }
+  return locked;
+};
+
+// Remove all bookings made by orderId from a specific asset.
+const releaseAssetBooking = async (productId: string, assetId: string, orderId: string): Promise<void> => {
+  const assetRef = doc(db, 'products', productId, 'assets', assetId);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(assetRef);
+    if (!snap.exists()) return;
+    const bookings: Booking[] = (snap.data().bookings || []).filter((b: Booking) => b.orderId !== orderId);
+    tx.update(assetRef, { bookings, updatedAt: Timestamp.now() });
+  });
+};
+
+type OrderAssignment = { productId: string; assetId: string; startDate: string; endDate: string };
+
+// Assign & lock one asset per unit for every item of an order. Rolls back all
+// locks and rethrows (e.g. '재고 부족') if any item can't be fully satisfied.
+const assignAssetsToOrder = async (
+  orderId: string,
+  data: { items?: Array<{ productId: string; quantity?: number; startDate?: string; endDate?: string }>; startDate?: string; endDate?: string }
+): Promise<OrderAssignment[]> => {
+  const items = data.items || [];
+  const assignments: OrderAssignment[] = [];
+  try {
+    for (const item of items) {
+      const qty = item.quantity || 1;
+      const start = item.startDate || data.startDate || '';
+      const end = item.endDate || data.endDate || '';
+      const ids = await lockAssetsForItem(item.productId, qty, start, end, orderId);
+      ids.forEach((assetId) => assignments.push({ productId: item.productId, assetId, startDate: start, endDate: end }));
+    }
+  } catch (e) {
+    await Promise.all(assignments.map((a) => releaseAssetBooking(a.productId, a.assetId, orderId)));
+    throw e;
+  }
+  return assignments;
 };
 
 // Admin API
@@ -1036,11 +1144,24 @@ export const adminApi = {
 
   // === Order Workflow ===
 
-  // 주문 승인 (입금 대기 상태로 변경)
+  // 주문 승인 (1차 승인): 각 아이템에 실물 자산을 배정하고 해당 기간을 잠금.
+  // 예약 가능한 자산이 부족하면 승인하지 않고 '재고 부족'으로 실패 → 이중예약 원천 차단.
   approveOrder: async (orderId: string): Promise<AdminOrder> => {
     const orderRef = doc(db, 'orders', orderId);
+    const orderDoc = await getDoc(orderRef);
+    if (!orderDoc.exists()) {
+      throw new Error('Order not found');
+    }
+
+    const data = orderDoc.data();
+    // Assign & lock assets now; throws 재고 부족 (and rolls back) if unavailable.
+    const assignments = (data.assignments && data.assignments.length)
+      ? data.assignments
+      : await assignAssetsToOrder(orderId, data);
+
     await updateDoc(orderRef, {
       status: 'approved',
+      assignments,
       approvedAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
@@ -1048,57 +1169,61 @@ export const adminApi = {
     return convertDoc<AdminOrder>(updatedDoc);
   },
 
-  // 주문 거절
+  // 주문 거절: 배정된 자산 잠금 해제
   rejectOrder: async (orderId: string, reason: string): Promise<AdminOrder> => {
     const orderRef = doc(db, 'orders', orderId);
+    const orderDoc = await getDoc(orderRef);
+    const assignments: OrderAssignment[] = orderDoc.exists() ? (orderDoc.data().assignments || []) : [];
+    await Promise.all(assignments.map((a) => releaseAssetBooking(a.productId, a.assetId, orderId)));
+
     await updateDoc(orderRef, {
       status: 'rejected',
       rejectionReason: reason,
+      assignments: [],
       rejectedAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
     const updatedDoc = await getDoc(orderRef);
-
-    // TODO: 사용자에게 알림 전송
-
     return convertDoc<AdminOrder>(updatedDoc);
   },
 
-  // 입금 확인 (예약 확정 + 날짜 차단)
+  // 입금 확인 (2차 승인 / 예약 확정): 승인 단계에서 이미 자산이 잠겼으면 상태만 확정.
+  // 승인을 건너뛴 경로로 들어와 미배정이면 여기서 안전망으로 자산을 잠근다(부족 시 실패).
   confirmPayment: async (orderId: string): Promise<AdminOrder> => {
     const orderRef = doc(db, 'orders', orderId);
     const orderDoc = await getDoc(orderRef);
-
     if (!orderDoc.exists()) {
       throw new Error('Order not found');
     }
 
-    // 주문 상태 업데이트
+    const data = orderDoc.data();
+    const assignments = (data.assignments && data.assignments.length)
+      ? data.assignments
+      : await assignAssetsToOrder(orderId, data);
+
     await updateDoc(orderRef, {
       status: 'confirmed',
+      assignments,
       confirmedAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
-
-    // 각 주문 아이템의 자산에 대해 차단 기간 생성
-    // TODO: 실제 자산 배정 및 차단 기간 생성 로직
-    // 현재는 상품 레벨에서 처리, 추후 자산 레벨로 확장
-
     const updatedDoc = await getDoc(orderRef);
     return convertDoc<AdminOrder>(updatedDoc);
   },
 
-  // 주문 취소
+  // 주문 취소(관리자): 배정된 자산 잠금 해제
   cancelOrder: async (orderId: string): Promise<AdminOrder> => {
     const orderRef = doc(db, 'orders', orderId);
+    const orderDoc = await getDoc(orderRef);
+    const assignments: OrderAssignment[] = orderDoc.exists() ? (orderDoc.data().assignments || []) : [];
+    await Promise.all(assignments.map((a) => releaseAssetBooking(a.productId, a.assetId, orderId)));
+
     await updateDoc(orderRef, {
       status: 'cancelled',
+      assignments: [],
       cancelledAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
-
-    // TODO: 자산 차단 기간 해제 로직
-
     const updatedDoc = await getDoc(orderRef);
     return convertDoc<AdminOrder>(updatedDoc);
   },
@@ -1149,14 +1274,18 @@ export const adminApi = {
     // Only 'available' assets are candidates
     const candidates = assetsSnapshot.docs.filter(d => d.data().status === 'available');
 
-    // Check each candidate's blocked periods in parallel (avoid sequential N+1)
+    // An asset is unavailable for the range if an order booking OR a manual
+    // maintenance block overlaps it. Check both, in parallel.
     const blockedFlags = await Promise.all(
       candidates.map(async (assetDoc) => {
-        const blockedRef = collection(db, 'products', productId, 'assets', assetDoc.id, 'blockedPeriods');
-        const blockedSnapshot = await getDocs(blockedRef);
+        const bookings: Booking[] = assetDoc.data().bookings || [];
+        if (bookings.some(b => datesOverlap(b.startDate, b.endDate, startDate, endDate))) {
+          return true;
+        }
+        const blockedSnapshot = await getDocs(collection(db, 'products', productId, 'assets', assetDoc.id, 'blockedPeriods'));
         return blockedSnapshot.docs.some(b => {
           const blocked = b.data();
-          return blocked.startDate <= endDate && blocked.endDate >= startDate;
+          return datesOverlap(blocked.startDate, blocked.endDate, startDate, endDate);
         });
       })
     );

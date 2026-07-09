@@ -92,12 +92,12 @@ export function useOrders(isAdmin: boolean) {
     }
 
     try {
-      await adminApi.updateOrderStatus(String(orderId), 'confirmed');
+      await adminApi.confirmPayment(String(orderId));
       alert('입금이 확인되었습니다. 예약이 확정되었습니다.');
       fetchOrders();
     } catch (error) {
       console.error('Failed to confirm payment:', error);
-      alert('입금 확인 중 오류가 발생했습니다.');
+      alert((error as Error)?.message || '입금 확인 중 오류가 발생했습니다.');
     }
   };
 
@@ -113,7 +113,7 @@ export function useOrders(isAdmin: boolean) {
       fetchOrders();
     } catch (error) {
       console.error('Failed to cancel order:', error);
-      alert('주문 취소 중 오류가 발생했습니다.');
+      alert((error as Error)?.message || '주문 취소 중 오류가 발생했습니다.');
     }
   };
 

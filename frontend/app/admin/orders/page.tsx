@@ -138,7 +138,7 @@ export default function AdminOrdersPage() {
       fetchOrders();
     } catch (error) {
       console.error('Failed to approve order:', error);
-      setToast({ message: '주문 승인 중 오류가 발생했습니다.', type: 'error' });
+      setToast({ message: (error as Error)?.message || '주문 승인 중 오류가 발생했습니다.', type: 'error' });
     }
   };
 
@@ -181,7 +181,7 @@ export default function AdminOrdersPage() {
       fetchOrders();
     } catch (error) {
       console.error('Failed to confirm payment:', error);
-      setToast({ message: '입금 확인 중 오류가 발생했습니다.', type: 'error' });
+      setToast({ message: (error as Error)?.message || '입금 확인 중 오류가 발생했습니다.', type: 'error' });
     }
   };
 
