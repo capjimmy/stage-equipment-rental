@@ -5,9 +5,10 @@ rules_version = '2';
 // Vercel only deploys the Next.js app, not these rules. Review + test in the
 // Firebase console Rules Playground before deploying to production.
 //
-// Model: catalog data is readable by any signed-in user (the app has no
-// anonymous auth, so every reader is already authenticated); writes are
-// restricted to the resource owner or an admin.
+// Model: public storefront. Catalog (products/categories/tags/featuredSets)
+// is world-readable so logged-out visitors can browse; inquiries can be
+// submitted without login. Orders, users, settings, and all catalog writes
+// remain restricted to the resource owner or an admin.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -26,19 +27,20 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // --- Catalog: read for signed-in users, write for admins only ---
+    // --- Catalog: public read (storefront), write for admins only ---
     match /products/{productId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
       match /{document=**} {
-        allow read: if isSignedIn();
+        allow read: if true;
         allow write: if isAdmin();
       }
     }
 
-    match /categories/{id}   { allow read: if isSignedIn(); allow write: if isAdmin(); }
-    match /tags/{id}         { allow read: if isSignedIn(); allow write: if isAdmin(); }
-    match /featuredSets/{id} { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    match /categories/{id}   { allow read: if true; allow write: if isAdmin(); }
+    match /tags/{id}         { allow read: if true; allow write: if isAdmin(); }
+    match /featuredSets/{id} { allow read: if true; allow write: if isAdmin(); }
+    // settings holds the deposit bank account — signed-in read only, admin write
     match /settings/{id}     { allow read: if isSignedIn(); allow write: if isAdmin(); }
 
     // --- Users: own profile read/update; admins manage all ---
@@ -55,17 +57,16 @@ service cloud.firestore {
       allow update, delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
     }
 
-    // --- Inquiries: any signed-in user can submit; only admins read/manage ---
+    // --- Inquiries: anyone can submit (public lead form); only admins read/manage ---
     match /inquiries/{id} {
-      allow create:               if isSignedIn();
+      allow create:               if true;
       allow read, update, delete: if isAdmin();
     }
 
-    // --- Notifications: owner reads/updates own; admins manage ---
+    // --- Notifications: owner reads/updates/deletes own; admins manage ---
     match /notifications/{id} {
-      allow read, update: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
-      allow create:       if isSignedIn();
-      allow delete:       if isAdmin();
+      allow read, update, delete: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create:               if isSignedIn();
     }
   }
 }
