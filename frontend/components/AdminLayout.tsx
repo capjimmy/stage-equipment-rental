@@ -10,6 +10,7 @@ import {
   Users,
   FolderTree,
   Star,
+  Settings,
   Menu,
   X,
   LogOut,
@@ -38,6 +39,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     { href: '/admin/users', icon: Users, label: '사용자 관리' },
     { href: '/admin/categories', icon: FolderTree, label: '카테고리 관리' },
     { href: '/admin/featured-sets', icon: Star, label: '추천 연출세트' },
+    { href: '/admin/settings', icon: Settings, label: '설정' },
   ];
 
   return (

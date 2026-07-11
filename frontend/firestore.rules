@@ -40,8 +40,9 @@ service cloud.firestore {
     match /categories/{id}   { allow read: if true; allow write: if isAdmin(); }
     match /tags/{id}         { allow read: if true; allow write: if isAdmin(); }
     match /featuredSets/{id} { allow read: if true; allow write: if isAdmin(); }
-    // settings holds the deposit bank account — signed-in read only, admin write
-    match /settings/{id}     { allow read: if isSignedIn(); allow write: if isAdmin(); }
+    // settings holds 사업자정보 (must be public per 전자상거래법) + deposit bank
+    // account (shown to customers to pay) — public read, admin write.
+    match /settings/{id}     { allow read: if true; allow write: if isAdmin(); }
 
     // --- Users: own profile read/update; admins manage all ---
     match /users/{userId} {

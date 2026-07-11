@@ -210,12 +210,21 @@ export interface AdminOrder {
   }>;
 }
 
-// 설정 (입금 계좌 정보 등)
+// 설정 (입금 계좌 정보, 사업자 정보 등)
 export interface Settings {
   bankAccount?: {
     bank: string;           // 은행명
     accountNumber: string;  // 계좌번호
     holder: string;         // 예금주
+  };
+  business?: {
+    name: string;             // 상호
+    representative: string;   // 대표자명
+    registrationNumber: string; // 사업자등록번호
+    mailOrderNumber: string;  // 통신판매업 신고번호
+    address: string;          // 사업장 주소
+    phone: string;            // 고객센터 전화
+    email: string;            // 고객센터 이메일
   };
   updatedAt: string;
 }

@@ -11,6 +11,7 @@ import { User as UserType } from '@/types';
 import HeroSection from '@/components/home/HeroSection';
 import CategoriesSection from '@/components/home/CategoriesSection';
 import FeaturedSetsGrid from '@/components/home/FeaturedSetsGrid';
+import BusinessInfoFooter from '@/components/BusinessInfoFooter';
 
 export default function Home() {
   const router = useRouter();
@@ -178,9 +179,7 @@ export default function Home() {
               </ul>
             </div>
           </div>
-          <div className="border-t border-slate-200 pt-6 md:pt-8 text-center text-xs md:text-sm text-slate-500">
-            <p>© 2025 스테이지박스. All rights reserved.</p>
-          </div>
+          <BusinessInfoFooter />
         </div>
       </footer>
 

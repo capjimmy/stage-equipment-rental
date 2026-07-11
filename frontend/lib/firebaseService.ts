@@ -764,6 +764,40 @@ const releaseAssetBooking = async (productId: string, assetId: string, orderId: 
 
 type OrderAssignment = { productId: string; assetId: string; startDate: string; endDate: string };
 
+// Create an in-app notification for a user and (best-effort) send an email copy.
+// Email only fires when RESEND_API_KEY is configured on the server; failures
+// never block the order action.
+const notifyCustomer = async (
+  userId: string | undefined,
+  type: string,
+  title: string,
+  message: string,
+  metadata: Record<string, unknown> = {}
+): Promise<void> => {
+  if (!userId) return;
+  try {
+    await addDoc(collection(db, 'notifications'), {
+      userId, type, title, message, metadata, isRead: false,
+      createdAt: Timestamp.now(), updatedAt: Timestamp.now(),
+    });
+  } catch (e) {
+    console.error('createNotification failed:', e);
+  }
+  try {
+    const userSnap = await getDoc(doc(db, 'users', userId));
+    const email = userSnap.exists() ? (userSnap.data().email as string | undefined) : undefined;
+    if (email) {
+      await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: email, subject: `[Stage Rental] ${title}`, text: message }),
+      });
+    }
+  } catch (e) {
+    console.error('email notify failed:', e);
+  }
+};
+
 // Assign & lock one asset per unit for every item of an order. Rolls back all
 // locks and rethrows (e.g. '재고 부족') if any item can't be fully satisfied.
 const assignAssetsToOrder = async (
@@ -1165,6 +1199,8 @@ export const adminApi = {
       approvedAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
+    await notifyCustomer(data.userId, 'order_approved', '주문이 승인되었습니다',
+      '입금 안내에 따라 기한 내 입금해 주세요. 입금 확인 후 예약이 확정됩니다.', { orderId });
     const updatedDoc = await getDoc(orderRef);
     return convertDoc<AdminOrder>(updatedDoc);
   },
@@ -1183,6 +1219,8 @@ export const adminApi = {
       rejectedAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
+    await notifyCustomer(orderDoc.exists() ? orderDoc.data().userId : undefined, 'order_rejected',
+      '주문이 거절되었습니다', `사유: ${reason}`, { orderId });
     const updatedDoc = await getDoc(orderRef);
     return convertDoc<AdminOrder>(updatedDoc);
   },
@@ -1207,6 +1245,8 @@ export const adminApi = {
       confirmedAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
+    await notifyCustomer(data.userId, 'order_confirmed', '예약이 확정되었습니다',
+      '입금이 확인되어 예약이 확정되었습니다. 이용해 주셔서 감사합니다.', { orderId });
     const updatedDoc = await getDoc(orderRef);
     return convertDoc<AdminOrder>(updatedDoc);
   },
@@ -1224,6 +1264,8 @@ export const adminApi = {
       cancelledAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
     });
+    await notifyCustomer(orderDoc.exists() ? orderDoc.data().userId : undefined, 'order_cancelled',
+      '예약이 취소되었습니다', '예약이 취소되었습니다. 문의사항은 고객센터로 연락 주세요.', { orderId });
     const updatedDoc = await getDoc(orderRef);
     return convertDoc<AdminOrder>(updatedDoc);
   },
